@@ -13,6 +13,7 @@
 		5522C70F16D569DB00401318 /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 5522C70D16D569DB00401318 /* Credits.rtf */; };
 		5522C71216D569DB00401318 /* RCLAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 5522C71116D569DB00401318 /* RCLAppDelegate.m */; };
 		5522C71516D569DB00401318 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 5522C71316D569DB00401318 /* MainMenu.xib */; };
+		5522C71E16D56B6700401318 /* FakeHandles.c in Sources */ = {isa = PBXBuildFile; fileRef = 5522C71D16D56B6700401318 /* FakeHandles.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,6 +30,7 @@
 		5522C71016D569DB00401318 /* RCLAppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RCLAppDelegate.h; sourceTree = "<group>"; };
 		5522C71116D569DB00401318 /* RCLAppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RCLAppDelegate.m; sourceTree = "<group>"; };
 		5522C71416D569DB00401318 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
+		5522C71D16D56B6700401318 /* FakeHandles.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = FakeHandles.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -84,6 +86,7 @@
 			children = (
 				5522C71016D569DB00401318 /* RCLAppDelegate.h */,
 				5522C71116D569DB00401318 /* RCLAppDelegate.m */,
+				5522C71D16D56B6700401318 /* FakeHandles.c */,
 				5522C71316D569DB00401318 /* MainMenu.xib */,
 				5522C70516D569DB00401318 /* Supporting Files */,
 			);
@@ -169,6 +172,7 @@
 			files = (
 				5522C70B16D569DB00401318 /* main.m in Sources */,
 				5522C71216D569DB00401318 /* RCLAppDelegate.m in Sources */,
+				5522C71E16D56B6700401318 /* FakeHandles.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -302,6 +306,7 @@
 				5522C71A16D569DB00401318 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
