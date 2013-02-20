@@ -7,7 +7,6 @@
 //
 
 #import "RCLAppDelegate.h"
-#import "MacMemory.h"
 #import "FakeHandles.h"
 
 
@@ -24,7 +23,7 @@
 	long		theSize;
 	char		num;
 	
-	InitFakeHandles( masterPointers );
+	InitFakeHandles( gMasterPointers );
 	
 	theHand = NewFakeHandle( 2 );
 	

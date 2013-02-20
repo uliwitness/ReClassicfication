@@ -13,6 +13,7 @@
 		5522C70F16D569DB00401318 /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 5522C70D16D569DB00401318 /* Credits.rtf */; };
 		5522C71216D569DB00401318 /* RCLAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 5522C71116D569DB00401318 /* RCLAppDelegate.m */; };
 		5522C71516D569DB00401318 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 5522C71316D569DB00401318 /* MainMenu.xib */; };
+		5583918616D57DAC00AA8F96 /* FakeHandles.c in Sources */ = {isa = PBXBuildFile; fileRef = 55C23DEB16D5779C0057C186 /* FakeHandles.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,7 +31,6 @@
 		5522C71416D569DB00401318 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		55C23DEB16D5779C0057C186 /* FakeHandles.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = FakeHandles.c; path = InterfaceLib/FakeHandles.c; sourceTree = SOURCE_ROOT; };
 		55C23DEC16D5779C0057C186 /* FakeHandles.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = FakeHandles.h; path = InterfaceLib/FakeHandles.h; sourceTree = SOURCE_ROOT; };
-		55C23DED16D5779C0057C186 /* MacMemory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = MacMemory.h; path = InterfaceLib/MacMemory.h; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -87,7 +87,6 @@
 				5522C71016D569DB00401318 /* RCLAppDelegate.h */,
 				5522C71116D569DB00401318 /* RCLAppDelegate.m */,
 				5522C71316D569DB00401318 /* MainMenu.xib */,
-				55C23DED16D5779C0057C186 /* MacMemory.h */,
 				55C23DEC16D5779C0057C186 /* FakeHandles.h */,
 				55C23DEB16D5779C0057C186 /* FakeHandles.c */,
 				5522C70516D569DB00401318 /* Supporting Files */,
@@ -173,6 +172,7 @@
 			files = (
 				5522C70B16D569DB00401318 /* main.m in Sources */,
 				5522C71216D569DB00401318 /* RCLAppDelegate.m in Sources */,
+				5583918616D57DAC00AA8F96 /* FakeHandles.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
