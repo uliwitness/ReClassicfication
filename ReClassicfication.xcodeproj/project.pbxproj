@@ -13,7 +13,7 @@
 		5522C70F16D569DB00401318 /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 5522C70D16D569DB00401318 /* Credits.rtf */; };
 		5522C71216D569DB00401318 /* RCLAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 5522C71116D569DB00401318 /* RCLAppDelegate.m */; };
 		5522C71516D569DB00401318 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 5522C71316D569DB00401318 /* MainMenu.xib */; };
-		5522C71E16D56B6700401318 /* FakeHandles.c in Sources */ = {isa = PBXBuildFile; fileRef = 5522C71D16D56B6700401318 /* FakeHandles.c */; };
+		55C23DE816D56D3C0057C186 /* FakeHandles.c in Sources */ = {isa = PBXBuildFile; fileRef = 55C23DE716D56D3C0057C186 /* FakeHandles.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,12 +25,13 @@
 		5522C70616D569DB00401318 /* ReClassicfication-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "ReClassicfication-Info.plist"; sourceTree = "<group>"; };
 		5522C70816D569DB00401318 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		5522C70A16D569DB00401318 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
-		5522C70C16D569DB00401318 /* ReClassicfication-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ReClassicfication-Prefix.pch"; sourceTree = "<group>"; };
 		5522C70E16D569DB00401318 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = en; path = en.lproj/Credits.rtf; sourceTree = "<group>"; };
 		5522C71016D569DB00401318 /* RCLAppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RCLAppDelegate.h; sourceTree = "<group>"; };
 		5522C71116D569DB00401318 /* RCLAppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RCLAppDelegate.m; sourceTree = "<group>"; };
 		5522C71416D569DB00401318 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
-		5522C71D16D56B6700401318 /* FakeHandles.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = FakeHandles.c; sourceTree = "<group>"; };
+		55C23DE716D56D3C0057C186 /* FakeHandles.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = FakeHandles.c; sourceTree = "<group>"; };
+		55C23DE916D56DB60057C186 /* FakeHandles.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FakeHandles.h; sourceTree = "<group>"; };
+		55C23DEA16D56DB60057C186 /* MacMemory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MacMemory.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -86,8 +87,10 @@
 			children = (
 				5522C71016D569DB00401318 /* RCLAppDelegate.h */,
 				5522C71116D569DB00401318 /* RCLAppDelegate.m */,
-				5522C71D16D56B6700401318 /* FakeHandles.c */,
 				5522C71316D569DB00401318 /* MainMenu.xib */,
+				55C23DEA16D56DB60057C186 /* MacMemory.h */,
+				55C23DE916D56DB60057C186 /* FakeHandles.h */,
+				55C23DE716D56D3C0057C186 /* FakeHandles.c */,
 				5522C70516D569DB00401318 /* Supporting Files */,
 			);
 			path = ReClassicfication;
@@ -99,7 +102,6 @@
 				5522C70616D569DB00401318 /* ReClassicfication-Info.plist */,
 				5522C70716D569DB00401318 /* InfoPlist.strings */,
 				5522C70A16D569DB00401318 /* main.m */,
-				5522C70C16D569DB00401318 /* ReClassicfication-Prefix.pch */,
 				5522C70D16D569DB00401318 /* Credits.rtf */,
 			);
 			name = "Supporting Files";
@@ -172,7 +174,7 @@
 			files = (
 				5522C70B16D569DB00401318 /* main.m in Sources */,
 				5522C71216D569DB00401318 /* RCLAppDelegate.m in Sources */,
-				5522C71E16D56B6700401318 /* FakeHandles.c in Sources */,
+				55C23DE816D56D3C0057C186 /* FakeHandles.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -267,8 +269,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "ReClassicfication/ReClassicfication-Prefix.pch";
 				INFOPLIST_FILE = "ReClassicfication/ReClassicfication-Info.plist";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
@@ -279,8 +279,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				COMBINE_HIDPI_IMAGES = YES;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "ReClassicfication/ReClassicfication-Prefix.pch";
 				INFOPLIST_FILE = "ReClassicfication/ReClassicfication-Info.plist";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
