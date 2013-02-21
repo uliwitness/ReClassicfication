@@ -119,6 +119,7 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 		newMap = NULL;
 	}
 	resourceDataOffset = BIG_ENDIAN_32(resourceDataOffset);
+	printf("resourceDataOffset %d\n", resourceDataOffset);
 
 	if( fread( &resourceMapOffset, 1, sizeof(resourceMapOffset), theFile ) != sizeof(resourceMapOffset) )
 	{
@@ -127,6 +128,7 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 		newMap = NULL;
 	}
 	resourceMapOffset = BIG_ENDIAN_32(resourceMapOffset);
+	printf("resourceMapOffset %d\n", resourceMapOffset);
 	
 	if( fread( &lengthOfResourceData, 1, sizeof(lengthOfResourceData), theFile ) != sizeof(lengthOfResourceData) )
 	{
@@ -150,9 +152,10 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 	fseek( theFile, resourceMapOffset, SEEK_SET );
 	fseek( theFile, 16, SEEK_CUR );		// Skip resource file header copy.
 	fseek( theFile, 4, SEEK_CUR );		// Skip next resource map placeholder.
-	fseek( theFile, 4, SEEK_CUR );		// Skip file ref num placeholder.
+	fseek( theFile, 2, SEEK_CUR );		// Skip file ref num placeholder.
 	fread( &newMap->resFileAttributes, 1, sizeof(uint16_t), theFile );		// Read file attributes.
 	newMap->resFileAttributes = BIG_ENDIAN_16(newMap->resFileAttributes);
+	printf("resFileAttributes %d\n", newMap->resFileAttributes);
 	
 	uint16_t		typeListOffset = 0;
 	uint16_t		nameListOffset = 0;
@@ -162,32 +165,38 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 	fread( &nameListOffset, 1, sizeof(nameListOffset), theFile );
 	nameListOffset = BIG_ENDIAN_16(nameListOffset);
 	
-	fseek( theFile, resourceMapOffset +(long)typeListOffset, SEEK_SET );
+	long		typeListSeekPos = resourceMapOffset +(long)typeListOffset;
+	printf("typeListSeekPos %ld\n", typeListSeekPos);
+	fseek( theFile, typeListSeekPos, SEEK_SET );
 	
 	uint16_t		numTypes = 0;
 	fread( &numTypes, 1, sizeof(numTypes), theFile );
 	numTypes = BIG_ENDIAN_16(numTypes);
+	printf("numTypes %d\n", numTypes +1);
 	
 	newMap->typeList = calloc( ((int)numTypes) +1, sizeof(struct FakeTypeListEntry) );
 	newMap->numTypes = numTypes;
 	for( int x = 0; x < ((int)numTypes) +1; x++ )
 	{
-		uint32_t	comparisonType = 'PICT';
 		fread( &newMap->typeList[x].resourceType, 1, sizeof(uint32_t), theFile );	// Read type code (4CC).
 		uint32_t	currType = BIG_ENDIAN_32(newMap->typeList[x].resourceType);
-		if( currType == comparisonType )
-			printf("It's a PICT!\n");
+		char		typeStr[5] = {0};
+		memmove( typeStr, &currType, 4 );
+		printf( "currType '%s'\n", typeStr );
 		
 		uint16_t		numResources = 0;
 		fread( &numResources, 1, sizeof(numResources), theFile );
 		numResources = BIG_ENDIAN_16(numResources);
+		printf("\tnumResources %d\n", numResources +1);
 		long	oldOffset = ftell(theFile);
 		
 		uint16_t		refListOffset = 0;
 		fread( &refListOffset, 1, sizeof(refListOffset), theFile );
 		refListOffset = BIG_ENDIAN_16(refListOffset);
 		
-		fseek( theFile, resourceMapOffset +(long)typeListOffset +(long)refListOffset, SEEK_SET );
+		long		refListSeekPos = typeListSeekPos +(long)refListOffset;
+		printf("\trefListSeekPos %ld\n", refListSeekPos);
+		fseek( theFile, refListSeekPos, SEEK_SET );
 				
 		newMap->typeList[x].resourceList = calloc( ((int)numResources) +1, sizeof(struct FakeReferenceListEntry) );
 		newMap->typeList[x].numberOfResourcesOfType = ((int)numResources) +1;
@@ -209,14 +218,16 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 			fseek( theFile, 4, SEEK_CUR );		// Skip resource Handle placeholder.
 		
 			long		innerOldOffset = ftell(theFile);
-			fseek( theFile, resourceDataOffset +(long)dataOffset, SEEK_SET );
+			long		dataSeekPos = resourceDataOffset +(long)dataOffset;
+			fseek( theFile, dataSeekPos, SEEK_SET );
 			uint32_t	dataLength = 0;
 			fread( &dataLength, 1, sizeof(dataLength), theFile );
 			dataLength = BIG_ENDIAN_32(dataLength);
 			newMap->typeList[x].resourceList[y].resourceHandle = NewFakeHandle(dataLength);
 			fread( (*newMap->typeList[x].resourceList[y].resourceHandle), 1, dataLength, theFile );
 			
-			fseek( theFile, resourceMapOffset +(long)nameListOffset +(long)nameOffset, SEEK_SET );
+			long		nameSeekPos = resourceMapOffset +(long)nameListOffset +(long)nameOffset;
+			fseek( theFile, nameSeekPos, SEEK_SET );
 			uint8_t	nameLength = 0;
 			fread( &nameLength, 1, sizeof(nameLength), theFile );
 			newMap->typeList[x].resourceList[y].resourceName[0] = nameLength;
