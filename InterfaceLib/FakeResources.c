@@ -295,10 +295,12 @@ int16_t	FakeOpenResFile( const char* inPath )
 void	FakeCloseResFile( int16_t inFileRefNum )
 {
 	struct FakeResourceMap**	prevMapPtr = NULL;
-	struct FakeResourceMap*	currMap = FakeFindResourceMap( inFileRefNum, &prevMapPtr );
+	struct FakeResourceMap*		currMap = FakeFindResourceMap( inFileRefNum, &prevMapPtr );
 	if( currMap )
 	{
 		*prevMapPtr = currMap->nextResourceMap;	// Remove this from the linked list.
+		if( gCurrResourceMap == currMap )
+			gCurrResourceMap = currMap->nextResourceMap;
 		
 		for( int x = 0; x < currMap->numTypes; x++ )
 		{
@@ -366,6 +368,15 @@ Handle	FakeGetResource( uint32_t resType, int16_t resID )
 	return NULL;
 }
 
+
+void	FakeUseResFile( int16_t resRefNum )
+{
+	struct FakeResourceMap*	currMap = FakeFindResourceMap( resRefNum, NULL );
+	if( !currMap )
+		currMap = gResourceMap;
+	
+	gCurrResourceMap = currMap;
+}
 
 
 

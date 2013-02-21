@@ -47,6 +47,7 @@ int16_t	FakeOpenResFile( const char* inPath );
 void	FakeCloseResFile( int16_t resRefNum );
 Handle	FakeGet1Resource( uint32_t resType, int16_t resID );
 Handle	FakeGetResource( uint32_t resType, int16_t resID );
+void	FakeUseResFile( int16_t resRefNum );
 
 
 int16_t	FakeResError();
