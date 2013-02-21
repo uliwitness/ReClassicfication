@@ -76,7 +76,7 @@ struct FakeReferenceListEntry
 	int16_t				resourceID;
 	uint8_t				resourceAttributes;
 	Handle				resourceHandle;
-	char				resourceName[256];
+	char				resourceName[257];	// 257 = 1 Pascal length byte, 255 characters for actual string, 1 byte for C terminator \0.
 };
 
 /*
@@ -188,11 +188,12 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 		fread( &numResources, 1, sizeof(numResources), theFile );
 		numResources = BIG_ENDIAN_16(numResources);
 		printf("\tnumResources %d\n", numResources +1);
-		long	oldOffset = ftell(theFile);
 		
 		uint16_t		refListOffset = 0;
 		fread( &refListOffset, 1, sizeof(refListOffset), theFile );
 		refListOffset = BIG_ENDIAN_16(refListOffset);
+		
+		long	oldOffset = ftell(theFile);
 		
 		long		refListSeekPos = typeListSeekPos +(long)refListOffset;
 		printf("\trefListSeekPos %ld\n", refListSeekPos);
@@ -226,12 +227,18 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 			newMap->typeList[x].resourceList[y].resourceHandle = NewFakeHandle(dataLength);
 			fread( (*newMap->typeList[x].resourceList[y].resourceHandle), 1, dataLength, theFile );
 			
-			long		nameSeekPos = resourceMapOffset +(long)nameListOffset +(long)nameOffset;
-			fseek( theFile, nameSeekPos, SEEK_SET );
-			uint8_t	nameLength = 0;
-			fread( &nameLength, 1, sizeof(nameLength), theFile );
-			newMap->typeList[x].resourceList[y].resourceName[0] = nameLength;
-			fread( newMap->typeList[x].resourceList[y].resourceName +1, 1, nameLength, theFile );
+			if( -1 != (long)nameOffset )
+			{
+				long		nameSeekPos = resourceMapOffset +(long)nameListOffset +(long)nameOffset;
+				fseek( theFile, nameSeekPos, SEEK_SET );
+				uint8_t	nameLength = 0;
+				fread( &nameLength, 1, sizeof(nameLength), theFile );
+				newMap->typeList[x].resourceList[y].resourceName[0] = nameLength;
+				if( nameLength > 0 )
+					fread( newMap->typeList[x].resourceList[y].resourceName +1, 1, nameLength, theFile );
+			}
+			
+			printf( "\t%d: \"%s\"\n", newMap->typeList[x].resourceList[y].resourceID, newMap->typeList[x].resourceList[y].resourceName +1 );
 			
 			fseek( theFile, innerOldOffset, SEEK_SET );
 		}
