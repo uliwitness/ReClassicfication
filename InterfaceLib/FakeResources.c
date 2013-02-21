@@ -174,11 +174,17 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 		fread( &refListOffset, 1, sizeof(refListOffset), theFile );
 		refListOffset += typeListOffset;
 		
+		uint32_t		resourceNameOffset = refListOffset +(((int)numResources) +1) * 12;	// Resource names are right after reference list.
+		
 		newMap->typeList[x].resourceList = calloc( ((int)numResources) +1, sizeof(struct FakeReferenceListEntry) );
 		for( int y = 0; y < ((int)numResources) +1; y++ )
 		{
 			fread( &newMap->typeList[x].resourceList[y].resourceID, 1, sizeof(uint16_t), theFile );
 			
+			uint16_t	nameOffset = 0;
+			fread( &nameOffset, 1, sizeof(nameOffset), theFile );
+			nameOffset += resourceNameOffset;
+
 			uint32_t	dataOffset = 0;
 			fread( &dataOffset, 1, sizeof(dataOffset), theFile );
 			newMap->typeList[x].resourceList[y].resourceAttributes = (dataOffset >> 24);
@@ -192,6 +198,13 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 			fread( &dataLength, 1, sizeof(dataLength), theFile );
 			newMap->typeList[x].resourceList[y].resourceHandle = NewFakeHandle(dataLength);
 			fread( (*newMap->typeList[x].resourceList[y].resourceHandle), 1, dataLength, theFile );
+			
+			fseek( theFile, nameOffset, SEEK_SET );
+			uint8_t	nameLength = 0;
+			fread( &nameLength, 1, sizeof(nameLength), theFile );
+			newMap->typeList[x].resourceList[y].resourceName[0] = nameLength;
+			fread( newMap->typeList[x].resourceList[y].resourceName +1, 1, nameLength, theFile );
+			
 			fseek( theFile, innerOldOffset, SEEK_SET );
 		}
 		
