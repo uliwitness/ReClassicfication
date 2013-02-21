@@ -39,7 +39,8 @@
 struct FakeResourceMap
 {
 	struct FakeResourceMap*			nextResourceMap;
-	FILE*							fileRefNum;
+	FILE*							fileDescriptor;
+	int16_t							fileRefNum;
 	uint16_t						resFileAttributes;
 	uint16_t						numTypes;
 	struct FakeTypeListEntry*		typeList;
@@ -85,13 +86,31 @@ struct FakeReferenceListEntry
 */
 
 
-struct FakeResourceMap	*	gResourceMap = NULL;	// Linked list.
+struct FakeResourceMap	*	gResourceMap = NULL;		// Linked list.
+struct FakeResourceMap	*	gCurrResourceMap = NULL;	// Start search of map here.
+int16_t						gFileRefNumSeed = 0;
 int16_t						gFakeResError = noErr;
 
 
 int16_t	FakeResError()
 {
 	return gFakeResError;
+}
+
+
+struct FakeResourceMap*	FakeFindResourceMap( int16_t inFileRefNum, struct FakeResourceMap*** outPrevMapPtr )
+{
+	struct FakeResourceMap*	currMap = gResourceMap;
+	if( outPrevMapPtr )
+		*outPrevMapPtr = &gResourceMap;
+	
+	while( currMap != NULL && currMap->fileRefNum != inFileRefNum )
+	{
+		if( outPrevMapPtr )
+			*outPrevMapPtr = &currMap->nextResourceMap;
+		currMap = currMap->nextResourceMap;
+	}
+	return currMap;
 }
 
 
@@ -110,7 +129,8 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 	uint32_t			lengthOfResourceMap = 0;
 	
 	struct FakeResourceMap	*	newMap = calloc( 1, sizeof(struct FakeResourceMap) );
-	newMap->fileRefNum = theFile;
+	newMap->fileDescriptor = theFile;
+	newMap->fileRefNum = gFileRefNumSeed++;
 	
 	if( fread( &resourceDataOffset, 1, sizeof(resourceDataOffset), theFile ) != sizeof(resourceDataOffset) )
 	{
@@ -178,11 +198,13 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 	newMap->numTypes = numTypes;
 	for( int x = 0; x < ((int)numTypes) +1; x++ )
 	{
-		fread( &newMap->typeList[x].resourceType, 1, sizeof(uint32_t), theFile );	// Read type code (4CC).
-		uint32_t	currType = BIG_ENDIAN_32(newMap->typeList[x].resourceType);
+		uint32_t	currType = 0;
+		fread( &currType, 1, sizeof(uint32_t), theFile );	// Read type code (4CC).
 		char		typeStr[5] = {0};
 		memmove( typeStr, &currType, 4 );
 		printf( "currType '%s'\n", typeStr );
+		currType = BIG_ENDIAN_32( currType );
+		newMap->typeList[x].resourceType = currType;
 		
 		uint16_t		numResources = 0;
 		fread( &numResources, 1, sizeof(numResources), theFile );
@@ -250,5 +272,101 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 	gResourceMap = newMap;
 	gFakeResError = noErr;
 	
+	gCurrResourceMap = gResourceMap;
+	
 	return newMap;
 }
+
+
+int16_t	FakeOpenResFile( const char* inPath )
+{
+	char		thePath[256] = {0};
+	memmove(thePath,inPath +1,inPath[0]);
+	struct FakeResourceMap*	theMap = FakeResFileOpen( thePath, "rw" );
+	if( !theMap )
+		theMap = FakeResFileOpen( thePath, "r" );
+	if( theMap )
+		return theMap->fileRefNum;
+	else
+		return gFakeResError;
+}
+
+
+void	FakeCloseResFile( int16_t inFileRefNum )
+{
+	struct FakeResourceMap**	prevMapPtr = NULL;
+	struct FakeResourceMap*	currMap = FakeFindResourceMap( inFileRefNum, &prevMapPtr );
+	if( currMap )
+	{
+		*prevMapPtr = currMap->nextResourceMap;	// Remove this from the linked list.
+		
+		for( int x = 0; x < currMap->numTypes; x++ )
+		{
+			for( int y = 0; y < currMap->typeList[x].numberOfResourcesOfType; y++ )
+			{
+				DisposeFakeHandle( currMap->typeList[x].resourceList[y].resourceHandle );
+			}
+			free( currMap->typeList[x].resourceList );
+		}
+		free( currMap->typeList );
+		free( currMap );
+	}
+}
+
+
+Handle	FakeGet1ResourceFromMap( uint32_t resType, int16_t resID, struct FakeResourceMap* inMap )
+{
+	if( inMap != NULL )
+	{
+		for( int x = 0; x < inMap->numTypes; x++ )
+		{
+			uint32_t		currType = inMap->typeList[x].resourceType;
+			if( currType == resType )
+			{
+				for( int y = 0; y < inMap->typeList[x].numberOfResourcesOfType; y++ )
+				{
+					if( inMap->typeList[x].resourceList[y].resourceID == resID )
+					{
+						return inMap->typeList[x].resourceList[y].resourceHandle;
+					}
+				}
+				break;
+			}
+		}
+	}
+	
+	gFakeResError = resNotFound;
+	
+	return NULL;
+}
+
+
+Handle	FakeGet1Resource( uint32_t resType, int16_t resID )
+{
+	return FakeGet1ResourceFromMap( resType, resID, gCurrResourceMap );
+}
+
+
+Handle	FakeGetResource( uint32_t resType, int16_t resID )
+{
+	struct FakeResourceMap *	currMap = gCurrResourceMap;
+	Handle						theRes = NULL;
+	
+	while( theRes == NULL && currMap != NULL )
+	{
+		theRes = FakeGet1ResourceFromMap( resType, resID, currMap );
+		if( theRes != NULL )
+			return theRes;
+		
+		currMap	= currMap->nextResourceMap;
+	}
+	
+	gFakeResError = resNotFound;
+	
+	return NULL;
+}
+
+
+
+
+

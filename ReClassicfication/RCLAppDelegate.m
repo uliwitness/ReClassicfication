@@ -44,8 +44,17 @@
 	
 	printf( "The number is: %d (%d)\n", (**(char**)theHand), num );
 	
+	const char*	cPath = "/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Resources/Extras2.rsrc";
+	char	path[257] = {0};
+	path[0] = strlen(cPath);
+	memmove( path +1, cPath, path[0] );
 	
-	FakeResFileOpen( "/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Resources/Extras2.rsrc", "r" );
+	int16_t resFileRef = FakeOpenResFile( path );
+	
+	Handle resHandle = FakeGetResource( 'pxm#', 4290 );
+	printf( "resHandle = %p\n", resHandle );
+	
+	FakeCloseResFile( resFileRef );
 }
 
 @end
