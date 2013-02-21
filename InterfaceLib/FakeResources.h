@@ -14,6 +14,7 @@
 
 
 // Possible return values of FakeResError():
+#ifndef __MACERRORS__
 enum
 {
 	resNotFound		= -192,
@@ -23,8 +24,10 @@ enum
 	eofErr			= -39,
 	fnfErr			= -43
 };
+#endif /* __MACERRORS__ */
 
 
+#ifndef __RESOURCES__
 // Resource attribute bit flags:
 enum
 {
@@ -37,6 +40,7 @@ enum
 	resSysHeap		= (1 << 6),
 	resReserved2	= (1 << 7)	// Apparently not yet used.
 };
+#endif
 
 
 struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode );

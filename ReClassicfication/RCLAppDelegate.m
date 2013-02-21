@@ -8,6 +8,7 @@
 
 #import "RCLAppDelegate.h"
 #import "FakeHandles.h"
+#import "FakeResources.h"
 
 
 @implementation RCLAppDelegate
@@ -42,6 +43,9 @@
 	printf( "New Size: %ld\n", theSize );
 	
 	printf( "The number is: %d (%d)\n", (**(char**)theHand), num );
+	
+	
+	FakeResFileOpen( "/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Resources/Extras2.rsrc", "r" );
 }
 
 @end

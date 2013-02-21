@@ -7,7 +7,9 @@
 //
 
 #include <stdint.h>
+#include <string.h>	// for memmove().
 #include "FakeResources.h"
+#include "EndianStuff.h"
 
 
 /*
@@ -115,6 +117,7 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 		free( newMap );
 		newMap = NULL;
 	}
+	resourceDataOffset = BIG_ENDIAN_32(resourceDataOffset);
 
 	if( fread( &resourceMapOffset, 1, sizeof(resourceMapOffset), theFile ) != sizeof(resourceMapOffset) )
 	{
@@ -122,6 +125,7 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 		free( newMap );
 		newMap = NULL;
 	}
+	resourceMapOffset = BIG_ENDIAN_32(resourceMapOffset);
 	
 	if( fread( &lengthOfResourceData, 1, sizeof(lengthOfResourceData), theFile ) != sizeof(lengthOfResourceData) )
 	{
@@ -129,6 +133,7 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 		free( newMap );
 		newMap = NULL;
 	}
+	lengthOfResourceData = BIG_ENDIAN_32(lengthOfResourceData);
 
 	if( fread( &lengthOfResourceMap, 1, sizeof(lengthOfResourceMap), theFile ) != sizeof(lengthOfResourceMap) )
 	{
@@ -136,6 +141,7 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 		free( newMap );
 		newMap = NULL;
 	}
+	lengthOfResourceMap = BIG_ENDIAN_32(lengthOfResourceMap);
 	
 	fseek( theFile, 112, SEEK_CUR );	// Skip system data.
 	fseek( theFile, 128, SEEK_CUR );	// Skip application data.
@@ -145,12 +151,15 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 	fseek( theFile, 4, SEEK_CUR );		// Skip next resource map placeholder.
 	fseek( theFile, 4, SEEK_CUR );		// Skip file ref num placeholder.
 	fread( &newMap->resFileAttributes, 1, sizeof(uint16_t), theFile );		// Read file attributes.
+	newMap->resFileAttributes = BIG_ENDIAN_16(newMap->resFileAttributes);
 	
 	uint16_t		typeListOffset = 0;
 	uint16_t		nameListOffset = 0;
 	
 	fread( &typeListOffset, 1, sizeof(typeListOffset), theFile );
+	typeListOffset = BIG_ENDIAN_16(typeListOffset);
 	fread( &nameListOffset, 1, sizeof(nameListOffset), theFile );
+	nameListOffset = BIG_ENDIAN_16(nameListOffset);
 	
 	typeListOffset += resourceMapOffset;
 	nameListOffset += resourceMapOffset;
@@ -159,19 +168,25 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 	
 	uint16_t		numTypes = 0;
 	fread( &numTypes, 1, sizeof(numTypes), theFile );
+	numTypes = BIG_ENDIAN_16(numTypes);
 	
 	newMap->typeList = calloc( ((int)numTypes) +1, sizeof(struct FakeTypeListEntry) );
 	
 	for( int x = 0; x < ((int)numTypes) +1; x++ )
 	{
+		uint32_t	comparisonType = 'PICT';
 		fread( &newMap->typeList[x].resourceType, 1, sizeof(uint32_t), theFile );	// Read type code (4CC).
+		if( BIG_ENDIAN_32(newMap->typeList[x].resourceType) == comparisonType )
+			printf("It's a PICT!\n");
 		
 		uint16_t		numResources = 0;
 		fread( &numResources, 1, sizeof(numResources), theFile );
+		numResources = BIG_ENDIAN_16(numResources);
 		long	oldOffset = ftell(theFile);
 		
 		uint16_t		refListOffset = 0;
 		fread( &refListOffset, 1, sizeof(refListOffset), theFile );
+		refListOffset = BIG_ENDIAN_16(refListOffset);
 		refListOffset += typeListOffset;
 		
 		uint32_t		resourceNameOffset = refListOffset +(((int)numResources) +1) * 12;	// Resource names are right after reference list.
@@ -180,15 +195,19 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 		for( int y = 0; y < ((int)numResources) +1; y++ )
 		{
 			fread( &newMap->typeList[x].resourceList[y].resourceID, 1, sizeof(uint16_t), theFile );
+			newMap->typeList[x].resourceList[y].resourceID = BIG_ENDIAN_16(newMap->typeList[x].resourceList[y].resourceID);
 			
 			uint16_t	nameOffset = 0;
 			fread( &nameOffset, 1, sizeof(nameOffset), theFile );
+			nameOffset = BIG_ENDIAN_16(nameOffset);
 			nameOffset += resourceNameOffset;
 
-			uint32_t	dataOffset = 0;
-			fread( &dataOffset, 1, sizeof(dataOffset), theFile );
-			newMap->typeList[x].resourceList[y].resourceAttributes = (dataOffset >> 24);
-			dataOffset &= 0xFF000000;
+			unsigned char	attributesAndDataOffset[4];
+			uint32_t		dataOffset = 0;
+			fread( &attributesAndDataOffset, 1, sizeof(attributesAndDataOffset), theFile );
+			newMap->typeList[x].resourceList[y].resourceAttributes = attributesAndDataOffset[0];
+			memmove( ((char*)&dataOffset) +1, attributesAndDataOffset +1, 3 );
+			dataOffset = BIG_ENDIAN_32(dataOffset);
 			dataOffset += resourceDataOffset;
 			fseek( theFile, 4, SEEK_CUR );		// Skip resource Handle placeholder.
 		
@@ -196,6 +215,7 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 			fseek( theFile, dataOffset, SEEK_SET );
 			uint32_t	dataLength = 0;
 			fread( &dataLength, 1, sizeof(dataLength), theFile );
+			dataLength = BIG_ENDIAN_32(dataLength);
 			newMap->typeList[x].resourceList[y].resourceHandle = NewFakeHandle(dataLength);
 			fread( (*newMap->typeList[x].resourceList[y].resourceHandle), 1, dataLength, theFile );
 			

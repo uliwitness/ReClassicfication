@@ -32,6 +32,7 @@
 		5522C71416D569DB00401318 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		553217ED16D5848D00D91E86 /* FakeResources.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = FakeResources.c; path = InterfaceLib/FakeResources.c; sourceTree = SOURCE_ROOT; };
 		553217EF16D58FA100D91E86 /* FakeResources.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = FakeResources.h; path = InterfaceLib/FakeResources.h; sourceTree = SOURCE_ROOT; };
+		5589E8DC16D61D2500171DAB /* EndianStuff.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = EndianStuff.h; path = InterfaceLib/EndianStuff.h; sourceTree = SOURCE_ROOT; };
 		55C23DEB16D5779C0057C186 /* FakeHandles.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = FakeHandles.c; path = InterfaceLib/FakeHandles.c; sourceTree = SOURCE_ROOT; };
 		55C23DEC16D5779C0057C186 /* FakeHandles.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = FakeHandles.h; path = InterfaceLib/FakeHandles.h; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -94,6 +95,7 @@
 				55C23DEB16D5779C0057C186 /* FakeHandles.c */,
 				553217EF16D58FA100D91E86 /* FakeResources.h */,
 				553217ED16D5848D00D91E86 /* FakeResources.c */,
+				5589E8DC16D61D2500171DAB /* EndianStuff.h */,
 				5522C70516D569DB00401318 /* Supporting Files */,
 			);
 			path = ReClassicfication;
