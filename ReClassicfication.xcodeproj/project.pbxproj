@@ -13,6 +13,7 @@
 		5522C70F16D569DB00401318 /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 5522C70D16D569DB00401318 /* Credits.rtf */; };
 		5522C71216D569DB00401318 /* RCLAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 5522C71116D569DB00401318 /* RCLAppDelegate.m */; };
 		5522C71516D569DB00401318 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 5522C71316D569DB00401318 /* MainMenu.xib */; };
+		553217EE16D5848D00D91E86 /* FakeResources.c in Sources */ = {isa = PBXBuildFile; fileRef = 553217ED16D5848D00D91E86 /* FakeResources.c */; };
 		5583918616D57DAC00AA8F96 /* FakeHandles.c in Sources */ = {isa = PBXBuildFile; fileRef = 55C23DEB16D5779C0057C186 /* FakeHandles.c */; };
 /* End PBXBuildFile section */
 
@@ -29,6 +30,8 @@
 		5522C71016D569DB00401318 /* RCLAppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RCLAppDelegate.h; sourceTree = "<group>"; };
 		5522C71116D569DB00401318 /* RCLAppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RCLAppDelegate.m; sourceTree = "<group>"; };
 		5522C71416D569DB00401318 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
+		553217ED16D5848D00D91E86 /* FakeResources.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = FakeResources.c; path = InterfaceLib/FakeResources.c; sourceTree = SOURCE_ROOT; };
+		553217EF16D58FA100D91E86 /* FakeResources.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = FakeResources.h; path = InterfaceLib/FakeResources.h; sourceTree = SOURCE_ROOT; };
 		55C23DEB16D5779C0057C186 /* FakeHandles.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = FakeHandles.c; path = InterfaceLib/FakeHandles.c; sourceTree = SOURCE_ROOT; };
 		55C23DEC16D5779C0057C186 /* FakeHandles.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = FakeHandles.h; path = InterfaceLib/FakeHandles.h; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -89,6 +92,8 @@
 				5522C71316D569DB00401318 /* MainMenu.xib */,
 				55C23DEC16D5779C0057C186 /* FakeHandles.h */,
 				55C23DEB16D5779C0057C186 /* FakeHandles.c */,
+				553217EF16D58FA100D91E86 /* FakeResources.h */,
+				553217ED16D5848D00D91E86 /* FakeResources.c */,
 				5522C70516D569DB00401318 /* Supporting Files */,
 			);
 			path = ReClassicfication;
@@ -173,6 +178,7 @@
 				5522C70B16D569DB00401318 /* main.m in Sources */,
 				5522C71216D569DB00401318 /* RCLAppDelegate.m in Sources */,
 				5583918616D57DAC00AA8F96 /* FakeHandles.c in Sources */,
+				553217EE16D5848D00D91E86 /* FakeResources.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
