@@ -8,18 +8,7 @@
 				port some of the more simple Macintosh code fragments to other
 				platforms.
 		
-	COPYRIGHT:	(C) Copyright 1998 by M. Uli Kusterer, all rights reserved.
-				
-	REACH ME AT:
-				E-MAIL:		witness@weblayout.com
-				URL:		http://www.weblayout.com/witness
-	
-	
-	REVISIONS:
-		2001-02-16	UK		Added returning of error code like MemError().
-		2001-02-15	UK		Added InitHandles, HLock and HUnlock macros and
-							header file.
-		1998-08-30	UK		Created.
+	(C) Copyright 1998 by Uli Kusterer, all rights reserved.
 				
 	======================================================================== */
 

@@ -8,12 +8,8 @@
 				port some of the more simple Macintosh code fragments to other
 				platforms.
 		
-	COPYRIGHT:	(C) Copyright 1998 by M. Uli Kusterer, all rights reserved.
+	(C) Copyright 1998 by Uli Kusterer, all rights reserved.
 				
-	REACH ME AT:
-				E-MAIL:		witness@weblayout.com
-				URL:		http://www.weblayout.com/witness
-	
 	DIRECTIONS:
 		A Handle is a memory block that remembers its size automatically.
 		To the user, a Handle is simply a pointer to a pointer to the actual
@@ -27,11 +23,6 @@
 		GetHandleSize() returns the actual size of the Handle.
 		Before making any of these calls, you *must have* called
 		InitHandles().
-	
-	REVISIONS:
-		2001-02-15	UK		Added InitHandles, HLock and HUnlock macros and
-							header file.
-		1998-08-30	UK		Created.
 				
 	======================================================================== */
 
