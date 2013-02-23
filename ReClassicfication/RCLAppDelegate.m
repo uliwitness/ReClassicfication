@@ -44,8 +44,11 @@
 	
 	printf( "The number is: %d (%d)\n", (**(char**)theHand), num );
 	
+	printf( "\n============================================================\n\n" );
+
 	NSString	*	resFilePath = [[NSBundle mainBundle] bundlePath];
 	resFilePath = [[resFilePath stringByDeletingLastPathComponent] stringByAppendingPathComponent: @"TestResFile.rsrc"];
+	
 	const char*	cPath = "/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Resources/Extras2.rsrc";
 	unsigned char	path[257] = {0};
 	path[0] = strlen(cPath);
@@ -60,7 +63,7 @@
 	FakeUpdateResFile( resFileRef );
 	FakeCloseResFile( resFileRef );
 	
-	printf( "============================================================\n" );
+	printf( "\n============================================================\n\n" );
 	
 	cPath = [resFilePath fileSystemRepresentation];
 	memset( path, 0, sizeof(path) );
