@@ -24,36 +24,40 @@
 	long		theSize;
 	char		num;
 	
-	InitFakeHandles( gMasterPointers );
+	FakeInitHandles( gMasterPointers );
 	
-	theHand = NewFakeHandle( 2 );
+	theHand = FakeNewHandle( 2 );
 	
 	(**(short**)theHand) = -1024;
 	
 	printf( "The number is: %d\n", (**(short**)theHand) );
 	
-	theSize = GetFakeHandleSize( theHand );
+	theSize = FakeGetHandleSize( theHand );
 	printf( "Current Size: %ld\n", theSize );
 	
 	num = ((**(short**)theHand) & 0xFF00) >> 8;
 	
 	theSize -= 1;
-	SetFakeHandleSize( theHand, theSize );
-	theSize = GetFakeHandleSize( theHand );
+	FakeSetHandleSize( theHand, theSize );
+	theSize = FakeGetHandleSize( theHand );
 	printf( "New Size: %ld\n", theSize );
 	
 	printf( "The number is: %d (%d)\n", (**(char**)theHand), num );
 	
+	NSString	*	resFilePath = [[NSBundle mainBundle] bundlePath];
+	resFilePath = [[resFilePath stringByDeletingLastPathComponent] stringByAppendingPathComponent: @"TestResFile.rsrc"];
 	const char*	cPath = "/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Resources/Extras2.rsrc";
 	char	path[257] = {0};
 	path[0] = strlen(cPath);
 	memmove( path +1, cPath, path[0] );
 	
 	int16_t resFileRef = FakeOpenResFile( path );
+	FakeRedirectResFileToPath( resFileRef, [resFilePath fileSystemRepresentation] );
 	
 	Handle resHandle = FakeGetResource( 'pxm#', 4290 );
 	printf( "resHandle = %p\n", resHandle );
 	
+	FakeUpdateResFile( resFileRef );
 	FakeCloseResFile( resFileRef );
 }
 

@@ -49,9 +49,14 @@ Handle	FakeGet1Resource( uint32_t resType, int16_t resID );
 Handle	FakeGetResource( uint32_t resType, int16_t resID );
 void	FakeUseResFile( int16_t resRefNum );
 void	FakeUpdateResFile( int16_t inFileRefNum );
-
+int16_t	FakeHomeResFile( Handle theResource );
 
 int16_t	FakeResError();
 
+
+// Private calls for internal use/tests:
+void					FakeRedirectResFileToPath( int16_t inFileRefNum, const char* cPath );
+struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode );
+struct FakeResourceMap*	FakeFindResourceMap( int16_t inFileRefNum, struct FakeResourceMap*** outPrevMapPtr );
 
 #endif
