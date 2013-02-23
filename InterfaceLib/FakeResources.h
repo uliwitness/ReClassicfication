@@ -43,7 +43,7 @@ enum
 #endif
 
 
-int16_t	FakeOpenResFile( const char* inPath );
+int16_t	FakeOpenResFile( const unsigned char* inPath );
 void	FakeCloseResFile( int16_t resRefNum );
 Handle	FakeGet1Resource( uint32_t resType, int16_t resID );
 Handle	FakeGetResource( uint32_t resType, int16_t resID );

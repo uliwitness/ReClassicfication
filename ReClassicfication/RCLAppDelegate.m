@@ -47,7 +47,7 @@
 	NSString	*	resFilePath = [[NSBundle mainBundle] bundlePath];
 	resFilePath = [[resFilePath stringByDeletingLastPathComponent] stringByAppendingPathComponent: @"TestResFile.rsrc"];
 	const char*	cPath = "/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Resources/Extras2.rsrc";
-	char	path[257] = {0};
+	unsigned char	path[257] = {0};
 	path[0] = strlen(cPath);
 	memmove( path +1, cPath, path[0] );
 	
@@ -58,6 +58,17 @@
 	printf( "resHandle = %p\n", resHandle );
 	
 	FakeUpdateResFile( resFileRef );
+	FakeCloseResFile( resFileRef );
+	
+	printf( "============================================================\n" );
+	
+	cPath = [resFilePath fileSystemRepresentation];
+	memset( path, 0, sizeof(path) );
+	path[0] = strlen(cPath);
+	memmove( path +1, cPath, path[0] );
+	resFileRef = FakeOpenResFile( path );
+	resHandle = FakeGetResource( 'pxm#', 4290 );
+	printf( "resHandle2 = %p\n", resHandle );
 	FakeCloseResFile( resFileRef );
 }
 
