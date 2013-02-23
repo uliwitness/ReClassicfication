@@ -216,7 +216,7 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 	printf("numTypes %d\n", numTypes +1);
 	
 	newMap->typeList = calloc( ((int)numTypes) +1, sizeof(struct FakeTypeListEntry) );
-	newMap->numTypes = numTypes;
+	newMap->numTypes = numTypes +1;
 	for( int x = 0; x < ((int)numTypes) +1; x++ )
 	{
 		uint32_t	currType = 0;
@@ -390,20 +390,19 @@ void	FakeUpdateResFile( int16_t inFileRefNum )
 
 	// Now write type list and ref lists:
 	uint32_t		nameListStartOffset = 0;
-	uint16_t		numTypes = currMap->numTypes -1;
-	FakeFWriteUInt16BE( numTypes, currMap->fileDescriptor );
+	FakeFWriteUInt16BE( currMap->numTypes -1, currMap->fileDescriptor );
 	uint32_t		resDataCurrOffset = resDataOffset;	// Keep track of where we wrote the associated data for each resource.
 	
 	for( int x = 0; x < currMap->numTypes; x++ )
 	{
 		// Write entry for this type:
-		uint32_t	currType = BIG_ENDIAN_32(currMap->typeList[x].resourceType);
+		uint32_t	currType = currMap->typeList[x].resourceType;
 		FakeFWriteUInt32BE( currType, currMap->fileDescriptor );
 		
 		uint16_t	numResources = currMap->typeList[x].numberOfResourcesOfType -1;
 		FakeFWriteUInt16BE( numResources, currMap->fileDescriptor );
 		
-		uint16_t	refListOffset = refListStartPosition;
+		uint16_t	refListOffset = refListStartPosition -typeListOffset;
 		FakeFWriteUInt16BE( refListOffset, currMap->fileDescriptor );
 		
 		// Jump to ref list location and write ref list out:
