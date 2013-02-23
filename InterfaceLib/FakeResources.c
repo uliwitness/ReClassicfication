@@ -348,7 +348,13 @@ void	FakeUpdateResFile( int16_t inFileRefNum )
 	fseek( currMap->fileDescriptor, 0, SEEK_SET );
 	uint32_t    resDataOffset = (uint32_t)headerLength;
 	FakeFWriteUInt32BE( resDataOffset, currMap->fileDescriptor );
-	fseek( currMap->fileDescriptor, headerLength, SEEK_SET );
+	FakeFWriteUInt32BE( 0, currMap->fileDescriptor );
+	FakeFWriteUInt32BE( 0, currMap->fileDescriptor );
+	FakeFWriteUInt32BE( 0, currMap->fileDescriptor );
+	for( int x = 0; x < (112 / sizeof(uint32_t)); x++ )
+		FakeFWriteUInt32BE( 0, currMap->fileDescriptor );
+	for( int x = 0; x < (128 / sizeof(uint32_t)); x++ )
+		FakeFWriteUInt32BE( 0, currMap->fileDescriptor );
 	
 	resMapOffset = (uint32_t)headerLength;
 	
@@ -402,7 +408,7 @@ void	FakeUpdateResFile( int16_t inFileRefNum )
 		uint16_t	numResources = currMap->typeList[x].numberOfResourcesOfType -1;
 		FakeFWriteUInt16BE( numResources, currMap->fileDescriptor );
 		
-		uint16_t	refListOffset = refListStartPosition -typeListOffset;
+		uint16_t	refListOffset = refListStartPosition;
 		FakeFWriteUInt16BE( refListOffset, currMap->fileDescriptor );
 		
 		// Jump to ref list location and write ref list out:
