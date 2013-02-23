@@ -433,7 +433,8 @@ void	FakeUpdateResFile( int16_t inFileRefNum )
 			}
 			
 			fwrite( &currMap->typeList[x].resourceList[y].resourceAttributes, 1, sizeof(uint8_t), currMap->fileDescriptor );
-			FakeFWriteUInt32BE( resDataCurrOffset, currMap->fileDescriptor );
+			uint32_t	resDataCurrOffsetBE = BIG_ENDIAN_32(resDataCurrOffset);
+			fwrite( ((uint8_t*)&resDataCurrOffsetBE) +1, 1, 3, currMap->fileDescriptor );
 			resDataCurrOffset += 4 + FakeGetHandleSize(currMap->typeList[x].resourceList[y].resourceHandle);
 			FakeFWriteUInt32BE( 0, currMap->fileDescriptor );	// Handle placeholder.
 			
