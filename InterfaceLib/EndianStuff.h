@@ -11,17 +11,18 @@
 
 #include <stdint.h>
 
-#if 0
+
+#if RECLASSIFICATION_BUILD_BIG_ENDIAN
 #define BIG_ENDIAN_16(value)	(value)
 #define BIG_ENDIAN_32(value)	(value)
 #else
 #define BIG_ENDIAN_16(value)                 \
-        (((((u_int16_t)(value))<<8) & 0xFF00)   | \
-         ((((u_int16_t)(value))>>8) & 0x00FF))
+        (((((uint16_t)(value))<<8) & 0xFF00)   | \
+         ((((uint16_t)(value))>>8) & 0x00FF))
 
 #define BIG_ENDIAN_32(value)                     \
-        (((((u_int32_t)(value))<<24) & 0xFF000000)  | \
-         ((((u_int32_t)(value))<< 8) & 0x00FF0000)  | \
-         ((((u_int32_t)(value))>> 8) & 0x0000FF00)  | \
-         ((((u_int32_t)(value))>>24) & 0x000000FF))
+        (((((uint32_t)(value))<<24) & 0xFF000000)  | \
+         ((((uint32_t)(value))<< 8) & 0x00FF0000)  | \
+         ((((uint32_t)(value))>> 8) & 0x0000FF00)  | \
+         ((((uint32_t)(value))>>24) & 0x000000FF))
 #endif
