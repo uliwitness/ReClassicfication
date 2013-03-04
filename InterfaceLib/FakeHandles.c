@@ -29,7 +29,7 @@
 /* The last entry in the master pointer array is mis-used to hold a pointer
 	to another master pointer array. Thus, we have a linked list of master
 	pointer arrays in RAM, and we don't run out of master pointers as easily. */
-MasterPointer		gMasterPointers[MAX_HANDLE_COUNT];
+MasterPointer		gMasterPointers[MASTERPOINTER_CHUNK_SIZE];
 long				gFakeHandleError = noErr;
 
 
@@ -48,7 +48,7 @@ void	FakeInitHandles( MasterPointer* masterPtrArray )
 {
 	long		x;
 	
-	for( x = 0; x < MAX_HANDLE_COUNT; x++ )
+	for( x = 0; x < MASTERPOINTER_CHUNK_SIZE; x++ )
 	{
 		masterPtrArray[x].actualPointer = NULL;
 		masterPtrArray[x].used = false;
@@ -76,7 +76,7 @@ void	FakeMoreMasters()
 	MasterPointer*	vCurrBlock;
 	
 	// Make a new master pointer block:
-	vMPtrBlock = malloc( MAX_HANDLE_COUNT *sizeof(MasterPointer) );
+	vMPtrBlock = malloc( MASTERPOINTER_CHUNK_SIZE *sizeof(MasterPointer) );
 	if( vMPtrBlock == NULL )
 	{
 		gFakeHandleError = memFulErr;
@@ -84,7 +84,7 @@ void	FakeMoreMasters()
 	}
 	
 	// Clear it:
-	for( x = 0; x < MAX_HANDLE_COUNT; x++ )
+	for( x = 0; x < MASTERPOINTER_CHUNK_SIZE; x++ )
 	{
 		vMPtrBlock[x].actualPointer = NULL;
 		vMPtrBlock[x].used = false;
@@ -94,15 +94,53 @@ void	FakeMoreMasters()
 	
 	// Find last master pointer in last master pointer block:
 	vCurrBlock = gMasterPointers;
-	while( vCurrBlock[MAX_HANDLE_COUNT -1].used == true )
-		vCurrBlock = (MasterPointer*) vCurrBlock[MAX_HANDLE_COUNT-1].actualPointer;
+	while( vCurrBlock[MASTERPOINTER_CHUNK_SIZE -1].used == true )
+		vCurrBlock = (MasterPointer*) vCurrBlock[MASTERPOINTER_CHUNK_SIZE-1].actualPointer;
 	
 	// Make this last master pointer point to our new block:
-	vCurrBlock[MAX_HANDLE_COUNT-1].actualPointer = (char*) vMPtrBlock;
-	vCurrBlock[MAX_HANDLE_COUNT-1].used = true;
-	vMPtrBlock[MAX_HANDLE_COUNT-1].size = MAX_HANDLE_COUNT *sizeof(MasterPointer);
+	vCurrBlock[MASTERPOINTER_CHUNK_SIZE-1].actualPointer = (char*) vMPtrBlock;
+	vCurrBlock[MASTERPOINTER_CHUNK_SIZE-1].used = true;
+	vMPtrBlock[MASTERPOINTER_CHUNK_SIZE-1].size = MASTERPOINTER_CHUNK_SIZE *sizeof(MasterPointer);
 	
 	gFakeHandleError = noErr;
+}
+
+
+Handle	FakeNewEmptyHandle()
+{
+	Handle			theHandle = NULL;
+	long			x;
+	MasterPointer*	vCurrBlock = gMasterPointers;
+	bool			notFound = true;
+	
+	gFakeHandleError = noErr;
+	
+	while( notFound )
+	{
+		for( x = 0; x < (MASTERPOINTER_CHUNK_SIZE-1); x++ )
+		{
+			if( !(vCurrBlock[x].used) )
+			{
+				vCurrBlock[x].used = true;
+				vCurrBlock[x].memoryFlags = 0;
+				vCurrBlock[x].size = 0;
+				
+				theHandle = (Handle) &(vCurrBlock[x]);
+				notFound = false;
+				break;
+			}
+		}
+		
+		if( !vCurrBlock[MASTERPOINTER_CHUNK_SIZE-1].used )	// Last is unused? We need a new master pointer block!
+		{
+			FakeMoreMasters();
+			if( !vCurrBlock[MASTERPOINTER_CHUNK_SIZE-1].used )	// No new block added?!
+				notFound = false;	// Terminate, it's very likely an error occurred.
+		}
+		vCurrBlock = (MasterPointer*) vCurrBlock[MASTERPOINTER_CHUNK_SIZE-1].actualPointer;	// Go next master pointer block.
+	}
+	
+	return theHandle;
 }
 
 
@@ -122,49 +160,18 @@ void	FakeMoreMasters()
 
 Handle	FakeNewHandle( long theSize )
 {
-	Handle			theHandle = NULL;
-	long			x;
-	MasterPointer*	vCurrBlock = gMasterPointers;
-	bool			notFound = true;
+	MasterPointer	*	theHandle = (MasterPointer*) FakeNewEmptyHandle();
 	
-	gFakeHandleError = noErr;
-	
-	while( notFound )
+	theHandle->actualPointer = malloc( theSize );
+	if( theHandle->actualPointer == NULL )
 	{
-		for( x = 0; x < (MAX_HANDLE_COUNT-1); x++ )
-		{
-			if( !(vCurrBlock[x].used) )
-			{
-				vCurrBlock[x].actualPointer = malloc( theSize );
-				if( ((long) vCurrBlock[x].actualPointer) > 0 )
-				{
-					vCurrBlock[x].used = true;
-					vCurrBlock[x].memoryFlags = 0;
-					vCurrBlock[x].size = theSize;
-					
-					theHandle = (Handle) &(vCurrBlock[x]);
-					notFound = false;
-					break;
-				}
-				else
-				{
-					gFakeHandleError = memFulErr;
-					notFound = false;
-					break;
-				}
-			}
-		}
-		
-		if( !vCurrBlock[MAX_HANDLE_COUNT-1].used )	// Last is unused? We need a new master pointer block!
-		{
-			FakeMoreMasters();
-			if( !vCurrBlock[MAX_HANDLE_COUNT-1].used )	// No new block added?!
-				notFound = false;	// Terminate, it's very likely an error occurred.
-		}
-		vCurrBlock = (MasterPointer*) vCurrBlock[MAX_HANDLE_COUNT-1].actualPointer;	// Go next master pointer block.
+		FakeDisposeHandle( (Handle) theHandle );
+		gFakeHandleError = memFulErr;
 	}
+	else
+		theHandle->size = theSize;
 	
-	return theHandle;
+	return (Handle)theHandle;
 }
 
 
@@ -184,11 +191,22 @@ void	FakeDisposeHandle( Handle theHand )
 {
 	MasterPointer*		theEntry = (MasterPointer*) theHand;
 	
-	free( theEntry->actualPointer );
+	if( theEntry->actualPointer )
+		free( theEntry->actualPointer );
 	theEntry->used = false;
 	theEntry->actualPointer = NULL;
 	theEntry->memoryFlags = 0;
 	theEntry->size = 0;
+}
+
+
+void	FakeEmptyHandle( Handle theHand )
+{
+	MasterPointer*		theEntry = (MasterPointer*) theHand;
+	
+	if( theEntry->actualPointer )
+		free( theEntry->actualPointer );
+	theEntry->actualPointer = NULL;
 }
 
 

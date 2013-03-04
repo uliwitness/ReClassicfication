@@ -49,7 +49,7 @@
   #define NULL	0L
 #endif
 
-#define MAX_HANDLE_COUNT		1024	// Max. number of Handles that may be created.
+#define MASTERPOINTER_CHUNK_SIZE		1024	// Size of blocks of master pointers we allocate in one go.
 
 
 // Error codes MemError() may return after Handle calls:
@@ -87,7 +87,7 @@ typedef struct MasterPointer
 //	Globals:
 // -----------------------------------------------------------------------------
 
-extern MasterPointer	gMasterPointers[MAX_HANDLE_COUNT];
+extern MasterPointer	gMasterPointers[MASTERPOINTER_CHUNK_SIZE];
 extern long				gFakeHandleError;
 
 
@@ -101,7 +101,8 @@ extern void		FakeDisposeHandle( Handle theHand );
 extern long		FakeGetHandleSize( Handle theHand );
 extern void		FakeSetHandleSize( Handle theHand, long theSize );
 extern void		FakeMoreMasters( void );
-
+extern Handle	FakeNewEmptyHandle();
+extern void		FakeEmptyHandle( Handle theHand );
 
 
 
