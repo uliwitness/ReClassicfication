@@ -90,6 +90,15 @@ struct FakeResourceMap	*	gResourceMap = NULL;		// Linked list.
 struct FakeResourceMap	*	gCurrResourceMap = NULL;	// Start search of map here.
 int16_t						gFileRefNumSeed = 0;
 int16_t						gFakeResError = noErr;
+struct FakeTypeCountEntry*	gLoadedTypes = NULL;
+int16_t						gNumLoadedTypes = 0;
+
+
+struct FakeTypeCountEntry
+{
+	uint32_t		type;
+	int16_t			retainCount;
+};
 
 
 size_t	FakeFWriteUInt32BE( uint32_t inInt, FILE* theFile )
@@ -113,9 +122,65 @@ size_t	FakeFWriteUInt16BE( uint16_t inInt, FILE* theFile )
 }
 
 
+void	FakeFSeek( FILE* inFile, long inOffset, int inMode )
+{
+	int theResult = fseek( inFile,  inOffset, inMode );
+	if( theResult != 0 )
+		printf( "Seek to %ld result %d\n", inOffset, theResult );
+}
+
+
 int16_t	FakeResError()
 {
 	return gFakeResError;
+}
+
+
+// To be able to iterate types across files without duplicates, we build a list
+//	of all types in open files and keep track of how many files contain each type
+//	by "retaining" each type and "releasing" it when a file closes.
+void	FakeRetainType( uint32_t resType )
+{
+	if( gLoadedTypes == NULL )
+	{
+		gLoadedTypes = malloc( sizeof(struct FakeTypeCountEntry) );
+		gLoadedTypes[0].type = resType;
+		gLoadedTypes[0].retainCount = 1;
+	}
+	
+	for( int x = 0; x < gNumLoadedTypes; x++ )
+	{
+		if( gLoadedTypes[x].type == resType )
+		{
+			gLoadedTypes[x].retainCount++;
+			return;
+		}
+	}
+	
+	gNumLoadedTypes++;
+	gLoadedTypes = realloc( gLoadedTypes, gNumLoadedTypes * sizeof(struct FakeTypeCountEntry) );
+	gLoadedTypes[gNumLoadedTypes -1].type = resType;
+	gLoadedTypes[gNumLoadedTypes -1].retainCount = 1;
+}
+
+
+// The converse of FakeRetainType (see for more info):
+void	FakeReleaseType( uint32_t resType )
+{
+	for( int x = 0; x < gNumLoadedTypes; x++ )
+	{
+		if( gLoadedTypes[x].type == resType )
+		{
+			gLoadedTypes[x].retainCount--;
+			if( gLoadedTypes[x].retainCount == 0 )
+			{
+				gNumLoadedTypes--;
+				if( gNumLoadedTypes > 0 )
+					gLoadedTypes[x] = gLoadedTypes[gNumLoadedTypes];
+			}
+			break;
+		}
+	}
 }
 
 
@@ -187,13 +252,13 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 	}
 	lengthOfResourceMap = BIG_ENDIAN_32(lengthOfResourceMap);
 	
-	fseek( theFile, 112, SEEK_CUR );	// Skip system data.
-	fseek( theFile, 128, SEEK_CUR );	// Skip application data.
+	FakeFSeek( theFile, 112, SEEK_CUR );	// Skip system data.
+	FakeFSeek( theFile, 128, SEEK_CUR );	// Skip application data.
 	
-	fseek( theFile, resourceMapOffset, SEEK_SET );
-	fseek( theFile, 16, SEEK_CUR );		// Skip resource file header copy.
-	fseek( theFile, 4, SEEK_CUR );		// Skip next resource map placeholder.
-	fseek( theFile, 2, SEEK_CUR );		// Skip file ref num placeholder.
+	FakeFSeek( theFile, resourceMapOffset, SEEK_SET );
+	FakeFSeek( theFile, 16, SEEK_CUR );		// Skip resource file header copy.
+	FakeFSeek( theFile, 4, SEEK_CUR );		// Skip next resource map placeholder.
+	FakeFSeek( theFile, 2, SEEK_CUR );		// Skip file ref num placeholder.
 	fread( &newMap->resFileAttributes, 1, sizeof(uint16_t), theFile );		// Read file attributes.
 	newMap->resFileAttributes = BIG_ENDIAN_16(newMap->resFileAttributes);
 	printf("resFileAttributes %d\n", newMap->resFileAttributes);
@@ -208,7 +273,7 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 	
 	long		typeListSeekPos = resourceMapOffset +(long)typeListOffset;
 	printf("typeListSeekPos %ld\n", typeListSeekPos);
-	fseek( theFile, typeListSeekPos, SEEK_SET );
+	FakeFSeek( theFile, typeListSeekPos, SEEK_SET );
 	
 	uint16_t		numTypes = 0;
 	fread( &numTypes, 1, sizeof(numTypes), theFile );
@@ -227,6 +292,8 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 		currType = BIG_ENDIAN_32( currType );
 		newMap->typeList[x].resourceType = currType;
 		
+		FakeRetainType( currType );
+				
 		uint16_t		numResources = 0;
 		fread( &numResources, 1, sizeof(numResources), theFile );
 		numResources = BIG_ENDIAN_16(numResources);
@@ -236,11 +303,11 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 		fread( &refListOffset, 1, sizeof(refListOffset), theFile );
 		refListOffset = BIG_ENDIAN_16(refListOffset);
 		
-		long	oldOffset = ftell(theFile);
+		long		oldOffset = ftell(theFile);
 		
 		long		refListSeekPos = typeListSeekPos +(long)refListOffset;
 		printf("\trefListSeekPos %ld\n", refListSeekPos);
-		fseek( theFile, refListSeekPos, SEEK_SET );
+		FakeFSeek( theFile, refListSeekPos, SEEK_SET );
 				
 		newMap->typeList[x].resourceList = calloc( ((int)numResources) +1, sizeof(struct FakeReferenceListEntry) );
 		newMap->typeList[x].numberOfResourcesOfType = ((int)numResources) +1;
@@ -259,11 +326,11 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 			newMap->typeList[x].resourceList[y].resourceAttributes = attributesAndDataOffset[0];
 			memmove( ((char*)&dataOffset) +1, attributesAndDataOffset +1, 3 );
 			dataOffset = BIG_ENDIAN_32(dataOffset);
-			fseek( theFile, 4, SEEK_CUR );		// Skip resource Handle placeholder.
+			FakeFSeek( theFile, 4, SEEK_CUR );		// Skip resource Handle placeholder.
 		
 			long		innerOldOffset = ftell(theFile);
 			long		dataSeekPos = resourceDataOffset +(long)dataOffset;
-			fseek( theFile, dataSeekPos, SEEK_SET );
+			FakeFSeek( theFile, dataSeekPos, SEEK_SET );
 			uint32_t	dataLength = 0;
 			fread( &dataLength, 1, sizeof(dataLength), theFile );
 			dataLength = BIG_ENDIAN_32(dataLength);
@@ -273,7 +340,7 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 			if( -1 != (long)nameOffset )
 			{
 				long		nameSeekPos = resourceMapOffset +(long)nameListOffset +(long)nameOffset;
-				fseek( theFile, nameSeekPos, SEEK_SET );
+				FakeFSeek( theFile, nameSeekPos, SEEK_SET );
 				uint8_t	nameLength = 0;
 				fread( &nameLength, 1, sizeof(nameLength), theFile );
 				newMap->typeList[x].resourceList[y].resourceName[0] = nameLength;
@@ -283,10 +350,10 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 			
 			printf( "\t%d: \"%s\"\n", newMap->typeList[x].resourceList[y].resourceID, newMap->typeList[x].resourceList[y].resourceName +1 );
 			
-			fseek( theFile, innerOldOffset, SEEK_SET );
+			FakeFSeek( theFile, innerOldOffset, SEEK_SET );
 		}
 		
-		fseek( theFile, oldOffset, SEEK_SET );
+		FakeFSeek( theFile, oldOffset, SEEK_SET );
 	}
 	
 	newMap->nextResourceMap = gResourceMap;
@@ -345,7 +412,7 @@ void	FakeUpdateResFile( int16_t inFileRefNum )
 	long						refListSize = 0;
 	
 	// Write header:
-	fseek( currMap->fileDescriptor, 0, SEEK_SET );
+	FakeFSeek( currMap->fileDescriptor, 0, SEEK_SET );
 	uint32_t    resDataOffset = (uint32_t)headerLength;
 	FakeFWriteUInt32BE( resDataOffset, currMap->fileDescriptor );
 	FakeFWriteUInt32BE( 0, currMap->fileDescriptor );
@@ -374,16 +441,16 @@ void	FakeUpdateResFile( int16_t inFileRefNum )
 	}
 	
 	// Write out what we know into the header now:
-	fseek( currMap->fileDescriptor, 4, SEEK_SET );
+	FakeFSeek( currMap->fileDescriptor, 4, SEEK_SET );
 	FakeFWriteUInt32BE( resMapOffset, currMap->fileDescriptor );
 	uint32_t	resDataLength = resMapOffset -(uint32_t)headerLength;
 	FakeFWriteUInt32BE( resDataLength, currMap->fileDescriptor );
 	
 	// Start writing resource map after data:
 	uint32_t		resMapLength = 0;
-	fseek( currMap->fileDescriptor, resMapOffset, SEEK_SET );
+	FakeFSeek( currMap->fileDescriptor, resMapOffset, SEEK_SET );
 	
-	fseek( currMap->fileDescriptor, 4 + 4 + 4 + 4 + 4 + 2, SEEK_CUR );
+	FakeFSeek( currMap->fileDescriptor, 4 + 4 + 4 + 4 + 4 + 2, SEEK_CUR );
 	resMapLength += 4 + 4 + 4 + 4 + 4 + 2;
 	FakeFWriteUInt16BE( currMap->resFileAttributes, currMap->fileDescriptor );
 	resMapLength += sizeof(uint16_t);
@@ -426,14 +493,14 @@ void	FakeUpdateResFile( int16_t inFileRefNum )
 				FakeFWriteUInt16BE( nameListStartOffset, currMap->fileDescriptor );	// Associate name in name table with this.
 				
 				long oldOffsetAfterNameOffset = ftell( currMap->fileDescriptor );
-				fseek( currMap->fileDescriptor, resMapOffset +typeListOffset +nameListOffset +nameListStartOffset, SEEK_SET );
+				FakeFSeek( currMap->fileDescriptor, resMapOffset +typeListOffset +nameListOffset +nameListStartOffset, SEEK_SET );
 				fwrite( currMap->typeList[x].resourceList[y].resourceName, currMap->typeList[x].resourceList[y].resourceName[0] +1, sizeof(uint8_t), currMap->fileDescriptor );
 
 				long	currMapLen = (ftell(currMap->fileDescriptor) -resMapOffset);
 				if( currMapLen > resMapLength )
 					resMapLength = (uint32_t)currMapLen;
 
-				fseek( currMap->fileDescriptor, oldOffsetAfterNameOffset, SEEK_SET );
+				FakeFSeek( currMap->fileDescriptor, oldOffsetAfterNameOffset, SEEK_SET );
 				nameListStartOffset += currMap->typeList[x].resourceList[y].resourceName[0] +1;	// Make sure we write next name *after* this one.
 			}
 			
@@ -451,11 +518,11 @@ void	FakeUpdateResFile( int16_t inFileRefNum )
 		refListStartPosition += currMap->typeList[x].numberOfResourcesOfType * (2 + 2 + 1 + 3 + 4);
 		
 		// Jump back to after our type entry so we can write the next one:
-		fseek( currMap->fileDescriptor, oldOffsetAfterPrevType, SEEK_SET );
+		FakeFSeek( currMap->fileDescriptor, oldOffsetAfterPrevType, SEEK_SET );
 	}
 
 	// Write res map length:
-	fseek( currMap->fileDescriptor, 4 + 4 + 4, SEEK_SET );
+	FakeFSeek( currMap->fileDescriptor, 4 + 4 + 4, SEEK_SET );
 	FakeFWriteUInt32BE( resMapLength, currMap->fileDescriptor );
 }
 
@@ -484,6 +551,8 @@ void	FakeCloseResFile( int16_t inFileRefNum )
 		
 		for( int x = 0; x < currMap->numTypes; x++ )
 		{
+			FakeReleaseType( currMap->typeList[x].resourceType );
+			
 			for( int y = 0; y < currMap->typeList[x].numberOfResourcesOfType; y++ )
 			{
 				FakeDisposeHandle( currMap->typeList[x].resourceList[y].resourceHandle );
@@ -548,6 +617,67 @@ Handle	FakeGetResource( uint32_t resType, int16_t resID )
 	gFakeResError = resNotFound;
 	
 	return NULL;
+}
+
+
+int16_t	FakeCount1ResourcesInMap( uint32_t resType, struct FakeResourceMap* inMap )
+{
+	gFakeResError = noErr;
+	
+	if( inMap != NULL )
+	{
+		for( int x = 0; x < inMap->numTypes; x++ )
+		{
+			uint32_t		currType = inMap->typeList[x].resourceType;
+			if( currType == resType )
+				return inMap->typeList[x].numberOfResourcesOfType;
+		}
+	}
+	
+	return 0;
+}
+
+
+int16_t	FakeCount1TypesInMap( struct FakeResourceMap* inMap )
+{
+	if( inMap == NULL )
+		return 0;
+	
+	return inMap->numTypes;
+}
+
+
+int16_t	FakeCount1Types()
+{
+	return FakeCount1TypesInMap( gCurrResourceMap );
+}
+
+
+int16_t	FakeCount1Resources( uint32_t resType )
+{
+	return FakeCount1ResourcesInMap( resType, gCurrResourceMap );
+}
+
+
+int16_t	FakeCountResources( uint32_t resType )
+{
+	int16_t						numRes = 0;
+	struct FakeResourceMap* 	theMap = gCurrResourceMap;
+	
+	while( theMap )
+	{
+		numRes += FakeCount1ResourcesInMap( resType, theMap );
+		
+		theMap = theMap->nextResourceMap;
+	}
+	
+	return numRes;
+}
+
+
+int16_t	FakeCountTypes()
+{
+	return gNumLoadedTypes;
 }
 
 

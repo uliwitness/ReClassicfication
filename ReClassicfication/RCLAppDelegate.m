@@ -55,6 +55,9 @@
 	memmove( path +1, cPath, path[0] );
 	
 	int16_t resFileRef = FakeOpenResFile( path );
+	
+	printf( "%d == %d\n", FakeCount1Types(), FakeCountTypes() );
+	
 	FakeRedirectResFileToPath( resFileRef, [resFilePath fileSystemRepresentation] );
 	
 	Handle resHandle = FakeGetResource( 'pxm#', 4290 );

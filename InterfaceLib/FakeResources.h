@@ -50,6 +50,10 @@ Handle	FakeGetResource( uint32_t resType, int16_t resID );
 void	FakeUseResFile( int16_t resRefNum );
 void	FakeUpdateResFile( int16_t inFileRefNum );
 int16_t	FakeHomeResFile( Handle theResource );
+int16_t	FakeCount1Types();
+int16_t	FakeCount1Resources( uint32_t resType );
+int16_t	FakeCountTypes();
+int16_t	FakeCountResources( uint32_t resType );
 
 int16_t	FakeResError();
 
@@ -58,5 +62,7 @@ int16_t	FakeResError();
 void					FakeRedirectResFileToPath( int16_t inFileRefNum, const char* cPath );
 struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode );
 struct FakeResourceMap*	FakeFindResourceMap( int16_t inFileRefNum, struct FakeResourceMap*** outPrevMapPtr );
+int16_t					FakeCount1ResourcesInMap( uint32_t resType, struct FakeResourceMap* inMap );
+int16_t					FakeCount1TypesInMap( struct FakeResourceMap* inMap );
 
 #endif
