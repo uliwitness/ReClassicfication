@@ -12,6 +12,11 @@
 #include "EndianStuff.h"
 
 
+// Turn this on if you want to read actual Mac resource forks on a Mac or Darwin
+//	but using the ANSI file APIs (uses Apple's "/..namedfork/rsrc" trick).
+#define READ_REAL_RESOURCE_FORKS		0
+
+
 /*
 	resource data offset									  4 bytes
 	resource map offset										  4 bytes
@@ -206,7 +211,7 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 	if( !theFile )
 	{
 		gFakeResError = fnfErr;
-		return 0;
+		return NULL;
 	}
 	
 	uint32_t			resourceDataOffset = 0;
@@ -223,6 +228,7 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 		gFakeResError = eofErr;
 		free( newMap );
 		newMap = NULL;
+		return NULL;
 	}
 	resourceDataOffset = BIG_ENDIAN_32(resourceDataOffset);
 	printf("resourceDataOffset %d\n", resourceDataOffset);
@@ -232,6 +238,7 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 		gFakeResError = eofErr;
 		free( newMap );
 		newMap = NULL;
+		return NULL;
 	}
 	resourceMapOffset = BIG_ENDIAN_32(resourceMapOffset);
 	printf("resourceMapOffset %d\n", resourceMapOffset);
@@ -241,6 +248,7 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 		gFakeResError = eofErr;
 		free( newMap );
 		newMap = NULL;
+		return NULL;
 	}
 	lengthOfResourceData = BIG_ENDIAN_32(lengthOfResourceData);
 
@@ -249,6 +257,7 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 		gFakeResError = eofErr;
 		free( newMap );
 		newMap = NULL;
+		return NULL;
 	}
 	lengthOfResourceMap = BIG_ENDIAN_32(lengthOfResourceMap);
 	
@@ -368,8 +377,14 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 
 int16_t	FakeOpenResFile( const unsigned char* inPath )
 {
-	char		thePath[256] = {0};
+#if READ_REAL_RESOURCE_FORKS
+	const char*	resForkSuffix = "/..namedfork/rsrc";
+#endif // READ_REAL_RESOURCE_FORKS
+	char		thePath[256 +17] = {0};
 	memmove(thePath,inPath +1,inPath[0]);
+#if READ_REAL_RESOURCE_FORKS
+	memmove(thePath +inPath[0],resForkSuffix,17);
+#endif // READ_REAL_RESOURCE_FORKS
 	struct FakeResourceMap*	theMap = FakeResFileOpen( thePath, "rw" );
 	if( !theMap )
 		theMap = FakeResFileOpen( thePath, "r" );
