@@ -2,7 +2,7 @@ What is it
 ----------
 
 Maybe one day a WINE-style reimplementation of the Classic Mac Toolbox for Mac OS X or
-other operating systems.
+other operating systems. The interesting stuff is in the InterfaceLib folder.
 
 
 How to build
