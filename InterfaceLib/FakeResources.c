@@ -430,9 +430,11 @@ void	FakeUpdateResFile( int16_t inFileRefNum )
 	FakeFSeek( currMap->fileDescriptor, 0, SEEK_SET );
 	uint32_t    resDataOffset = (uint32_t)headerLength;
 	FakeFWriteUInt32BE( resDataOffset, currMap->fileDescriptor );
-	FakeFWriteUInt32BE( 0, currMap->fileDescriptor );
-	FakeFWriteUInt32BE( 0, currMap->fileDescriptor );
-	FakeFWriteUInt32BE( 0, currMap->fileDescriptor );
+	FakeFWriteUInt32BE( 0, currMap->fileDescriptor );               // placeholder offset to resource map
+	FakeFWriteUInt32BE( 0, currMap->fileDescriptor );               // placeholder resource data length
+	FakeFWriteUInt32BE( 0, currMap->fileDescriptor );               // placeholder resource map length
+
+	// reserved
 	for( int x = 0; x < (112 / sizeof(uint32_t)); x++ )
 		FakeFWriteUInt32BE( 0, currMap->fileDescriptor );
 	for( int x = 0; x < (128 / sizeof(uint32_t)); x++ )
@@ -450,9 +452,9 @@ void	FakeUpdateResFile( int16_t inFileRefNum )
 			resMapOffset += 4;
 			fwrite( *currMap->typeList[x].resourceList[y].resourceHandle, 1, theSize, currMap->fileDescriptor );
 			resMapOffset += theSize;
-			
-			refListSize += currMap->typeList[x].numberOfResourcesOfType * (2 + 2 + 1 + 3 + 4);
 		}
+
+		refListSize += currMap->typeList[x].numberOfResourcesOfType * (2 + 2 + 1 + 3 + 4);
 	}
 	
 	// Write out what we know into the header now:
@@ -465,22 +467,25 @@ void	FakeUpdateResFile( int16_t inFileRefNum )
 	uint32_t		resMapLength = 0;
 	FakeFSeek( currMap->fileDescriptor, resMapOffset, SEEK_SET );
 	
-	FakeFSeek( currMap->fileDescriptor, 4 + 4 + 4 + 4 + 4 + 2, SEEK_CUR );
-	resMapLength += 4 + 4 + 4 + 4 + 4 + 2;
+	resMapLength += (4 + 4 + 4 + 4) + 4 + 2;	// reserved: copy of resource header, next resource handle, file ref
+	FakeFSeek( currMap->fileDescriptor, resMapLength, SEEK_CUR );
 	FakeFWriteUInt16BE( currMap->resFileAttributes, currMap->fileDescriptor );
 	resMapLength += sizeof(uint16_t);
 	
 	uint16_t		typeListOffset = ftell(currMap->fileDescriptor) +2L +2L -resMapOffset;
-	FakeFWriteUInt16BE( typeListOffset, currMap->fileDescriptor );	// Res map relative.
+	FakeFWriteUInt16BE( typeListOffset, currMap->fileDescriptor );	// Res map relative, points to the type count
 	long			refListStartPosition = typeListOffset + 2 + currMap->numTypes * (4 + 2 + 2);	// Calc where we'll start to put resource lists (right after types).
+
 	uint16_t		nameListOffset = refListStartPosition +refListSize;		// Calc where we'll start to put name lists (right after resource lists).
 	FakeFWriteUInt16BE( nameListOffset, currMap->fileDescriptor );	// Res map relative.
 
 	// Now write type list and ref lists:
 	uint32_t		nameListStartOffset = 0;
 	FakeFWriteUInt16BE( currMap->numTypes -1, currMap->fileDescriptor );
-	uint32_t		resDataCurrOffset = resDataOffset;	// Keep track of where we wrote the associated data for each resource.
+	uint32_t		resDataCurrOffset = 0;		// Keep track of where we wrote the associated data for each resource, relative to the start of resource data
 	
+	refListStartPosition = 2 + currMap->numTypes * (4 + 2 + 2); // relative to beginning of resource type list
+
 	for( int x = 0; x < currMap->numTypes; x++ )
 	{
 		// Write entry for this type:
@@ -496,6 +501,8 @@ void	FakeUpdateResFile( int16_t inFileRefNum )
 		// Jump to ref list location and write ref list out:
 		long		oldOffsetAfterPrevType = ftell(currMap->fileDescriptor);
 		
+		FakeFSeek( currMap->fileDescriptor, resMapOffset + typeListOffset + refListStartPosition, SEEK_SET );
+
 		for( int y = 0; y < currMap->typeList[x].numberOfResourcesOfType; y++ )
 		{
 			FakeFWriteInt16BE( currMap->typeList[x].resourceList[y].resourceID, currMap->fileDescriptor );
@@ -508,7 +515,7 @@ void	FakeUpdateResFile( int16_t inFileRefNum )
 				FakeFWriteUInt16BE( nameListStartOffset, currMap->fileDescriptor );	// Associate name in name table with this.
 				
 				long oldOffsetAfterNameOffset = ftell( currMap->fileDescriptor );
-				FakeFSeek( currMap->fileDescriptor, resMapOffset +typeListOffset +nameListOffset +nameListStartOffset, SEEK_SET );
+				FakeFSeek( currMap->fileDescriptor, resMapOffset +nameListOffset +nameListStartOffset, SEEK_SET );
 				fwrite( currMap->typeList[x].resourceList[y].resourceName, currMap->typeList[x].resourceList[y].resourceName[0] +1, sizeof(uint8_t), currMap->fileDescriptor );
 
 				long	currMapLen = (ftell(currMap->fileDescriptor) -resMapOffset);
