@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 #include <string.h>	// for memmove().
+#include <unistd.h>
 #include "FakeResources.h"
 #include "EndianStuff.h"
 
@@ -44,6 +45,7 @@
 struct FakeResourceMap
 {
 	struct FakeResourceMap*			nextResourceMap;
+	bool							dirty;				// per-file tracking of whether FakeUpdateResFile() needs to write
 	FILE*							fileDescriptor;
 	int16_t							fileRefNum;
 	uint16_t						resFileAttributes;
@@ -385,7 +387,7 @@ int16_t	FakeOpenResFile( const unsigned char* inPath )
 #if READ_REAL_RESOURCE_FORKS
 	memmove(thePath +inPath[0],resForkSuffix,17);
 #endif // READ_REAL_RESOURCE_FORKS
-	struct FakeResourceMap*	theMap = FakeResFileOpen( thePath, "rw" );
+	struct FakeResourceMap*	theMap = FakeResFileOpen( thePath, "r+" );
 	if( !theMap )
 		theMap = FakeResFileOpen( thePath, "r" );
 	if( theMap )
@@ -395,23 +397,106 @@ int16_t	FakeOpenResFile( const unsigned char* inPath )
 }
 
 
-int16_t	FakeHomeResFile( Handle theResource )
+static bool FakeFindResourceHandleInMap( Handle theResource, struct FakeTypeListEntry** outTypeEntry, struct FakeReferenceListEntry** outRefEntry, struct FakeResourceMap* inMap )
+{
+	if( (theResource != NULL) && (inMap != NULL) )
+	{
+		for( int x = 0; x < inMap->numTypes; x++ )
+		{
+			for( int y = 0; y < inMap->typeList[x].numberOfResourcesOfType; y++ )
+			{
+				if( inMap->typeList[x].resourceList[y].resourceHandle == theResource )
+				{
+					if (outTypeEntry)
+					{
+						*outTypeEntry = &inMap->typeList[x];
+					}
+					
+					if (outRefEntry)
+					{
+						*outRefEntry = &inMap->typeList[x].resourceList[y];
+					}
+
+					return true;
+				}
+			}
+		}
+	}
+
+	if (outTypeEntry)
+	{
+		*outTypeEntry = NULL;
+	}
+	
+	if (outRefEntry)
+	{
+		*outRefEntry = NULL;
+	}
+
+	return false;
+}
+
+
+static bool FakeFindResourceHandle( Handle theResource, struct FakeResourceMap** outMap, struct FakeTypeListEntry** outTypeEntry, struct FakeReferenceListEntry** outRefEntry )
 {
 	struct FakeResourceMap*		currMap = gResourceMap;
 	while( currMap != NULL )
 	{
-		for( int x = 0; x < currMap->numTypes; x++ )
+		if( FakeFindResourceHandleInMap(theResource, outTypeEntry, outRefEntry, currMap) )
 		{
-			for( int y = 0; y < currMap->typeList[x].numberOfResourcesOfType; y++ )
+			if( outMap )
 			{
-				if( currMap->typeList[x].resourceList[y].resourceHandle == theResource )
-				{
-					gFakeResError = noErr;
-					return currMap->fileRefNum;
-				}
+				*outMap = currMap;
+			}
+			return true;
+		}
+
+		currMap = currMap->nextResourceMap;
+	}
+
+	if ( outMap )
+	{
+		*outMap = NULL;
+	}
+	
+	if (outTypeEntry)
+	{
+		*outTypeEntry = NULL;
+	}
+	
+	if (outRefEntry)
+	{
+		*outRefEntry = NULL;
+	}
+
+	return false;
+}
+
+
+static struct FakeTypeListEntry* FakeFindTypeListEntry(struct FakeResourceMap* inMap, uint32_t theType)
+{
+	if( inMap != NULL )
+	{
+		for( int x = 0; x < inMap->numTypes; x++ )
+		{
+			if( inMap->typeList[x].resourceType == theType )
+			{
+				return &inMap->typeList[x];
 			}
 		}
-		currMap = currMap->nextResourceMap;
+	}
+
+	return NULL;
+}
+
+int16_t	FakeHomeResFile( Handle theResource )
+{
+	struct FakeResourceMap*		currMap = NULL;
+
+	if( FakeFindResourceHandle( theResource, &currMap, NULL, NULL) )
+	{
+		gFakeResError = noErr;
+		return currMap->fileRefNum;
 	}
 	
 	gFakeResError = resNotFound;
@@ -441,6 +526,9 @@ void	FakeUpdateResFile( int16_t inFileRefNum )
 	uint32_t					resMapOffset = 0;
 	long						refListSize = 0;
 	
+	if (!currMap->dirty)
+		return;
+
 	// Write header:
 	FakeFSeek( currMap->fileDescriptor, 0, SEEK_SET );
 	uint32_t    resDataOffset = (uint32_t)headerLength;
@@ -562,6 +650,10 @@ void	FakeUpdateResFile( int16_t inFileRefNum )
 	// Write res map length:
 	FakeFSeek( currMap->fileDescriptor, kResourceHeaderMapLengthPos, SEEK_SET );
 	FakeFWriteUInt32BE( resMapLength, currMap->fileDescriptor );
+	
+	ftruncate(fileno(currMap->fileDescriptor), resMapOffset + resMapLength);
+	
+	currMap->dirty = false;
 }
 
 
@@ -573,6 +665,7 @@ void	FakeRedirectResFileToPath( int16_t inFileRefNum, const char* cPath )
 	{
 		fclose( currMap->fileDescriptor );
 		currMap->fileDescriptor = fopen( cPath, "w" );
+		currMap->dirty = true;
 	}
 }
 
@@ -583,6 +676,8 @@ void	FakeCloseResFile( int16_t inFileRefNum )
 	struct FakeResourceMap*		currMap = FakeFindResourceMap( inFileRefNum, &prevMapPtr );
 	if( currMap )
 	{
+		FakeUpdateResFile(inFileRefNum);
+		
 		*prevMapPtr = currMap->nextResourceMap;	// Remove this from the linked list.
 		if( gCurrResourceMap == currMap )
 			gCurrResourceMap = currMap->nextResourceMap;
@@ -607,6 +702,8 @@ void	FakeCloseResFile( int16_t inFileRefNum )
 
 Handle	FakeGet1ResourceFromMap( uint32_t resType, int16_t resID, struct FakeResourceMap* inMap )
 {
+	gFakeResError = noErr;
+	
 	if( inMap != NULL )
 	{
 		for( int x = 0; x < inMap->numTypes; x++ )
@@ -647,7 +744,10 @@ Handle	FakeGetResource( uint32_t resType, int16_t resID )
 	{
 		theRes = FakeGet1ResourceFromMap( resType, resID, currMap );
 		if( theRes != NULL )
+		{
+			gFakeResError = noErr;
 			return theRes;
+		}
 		
 		currMap	= currMap->nextResourceMap;
 	}
@@ -719,6 +819,16 @@ int16_t	FakeCountTypes()
 }
 
 
+int16_t FakeCurResFile()
+{
+	struct FakeResourceMap* currMap = gCurrResourceMap;
+
+	if( !currMap )
+		return 0;
+	
+	return currMap->fileRefNum;
+}
+
 void	FakeUseResFile( int16_t resRefNum )
 {
 	struct FakeResourceMap*	currMap = FakeFindResourceMap( resRefNum, NULL );
@@ -728,6 +838,279 @@ void	FakeUseResFile( int16_t resRefNum )
 	gCurrResourceMap = currMap;
 }
 
+
+void FakeGet1IndType( uint32_t * resType, int16_t index )
+{
+	if( resType == NULL )
+		return;
+
+	*resType = 0;
+	
+	struct FakeResourceMap* currMap = gCurrResourceMap;
+	if( (index <= 0) || (index > FakeCount1Types()) || !currMap )
+	{
+		gFakeResError = resNotFound;
+		return;
+	}
+
+	*resType = currMap->typeList[index-1].resourceType;
+	
+	gFakeResError = noErr;
+}
+
+Handle FakeGet1IndResource( uint32_t resType, int16_t index )
+{
+	struct FakeResourceMap* currMap = gCurrResourceMap;
+
+	if( !currMap || (index <= 0) || (index > FakeCount1Resources(resType)))
+	{
+		gFakeResError = resNotFound;
+	}
+
+	for( int x = 0; x < currMap->numTypes; x++ )
+	{
+		uint32_t		currType = currMap->typeList[x].resourceType;
+		if( currType == resType )
+		{
+			gFakeResError = noErr;
+			return currMap->typeList[x].resourceList[index-1].resourceHandle;
+		}
+	}
+	
+	gFakeResError = resNotFound;
+	
+	return NULL;
+}
+
+void FakeGetResInfo( Handle theResource, int16_t * theID, uint32_t * theType, FakeStr255 * name )
+{
+	struct FakeTypeListEntry*   typeEntry = NULL;
+	struct FakeReferenceListEntry* refEntry = NULL;
+
+
+	if( FakeFindResourceHandle(theResource, NULL, &typeEntry, &refEntry) )
+	{
+		gFakeResError = noErr;
+		if( theID )
+		{
+			*theID = refEntry->resourceID;
+		}
+		
+		if( theType )
+		{
+			*theType = typeEntry->resourceType;
+		}
+		
+		if( name )
+		{
+			memcpy(name, refEntry->resourceName, sizeof(FakeStr255));
+		}
+		return;
+	}
+	
+	gFakeResError = resNotFound;
+}
+
+
+void FakeSetResInfo( Handle theResource, int16_t theID, FakeStr255 name )
+{
+	struct FakeReferenceListEntry* refEntry = NULL;
+
+	if( !theResource || !FakeFindResourceHandle( theResource, NULL, NULL, &refEntry) )
+	{
+		gFakeResError = resNotFound;
+		return;
+	}
+
+	if( (refEntry->resourceAttributes & resProtected) != 0 )
+	{
+		gFakeResError = resAttrErr;
+		return;
+	}
+
+	refEntry->resourceID = theID;
+	memcpy(refEntry->resourceName, name, sizeof(FakeStr255));
+
+	gFakeResError = noErr;
+}
+
+
+void FakeAddResource( Handle theData, uint32_t theType, int16_t theID, FakeStr255 name )
+{
+	struct FakeResourceMap* currMap = gCurrResourceMap;
+	struct FakeTypeListEntry* typeEntry = NULL;
+	struct FakeReferenceListEntry* resourceEntry = NULL;
+
+	// AddResource() only ensures that the handle is not a resource, but doesn't check whether the type/ID are already in use
+	if( !theData || FakeFindResourceHandleInMap( theData, &typeEntry, &resourceEntry, currMap ) )
+	{
+		gFakeResError = addResFailed;
+		return;
+	}
+
+	typeEntry = FakeFindTypeListEntry( currMap, theType );
+	if( !typeEntry )
+	{
+		currMap->numTypes++;
+		currMap->typeList = realloc(currMap->typeList, currMap->numTypes * sizeof(struct FakeTypeListEntry));
+
+		typeEntry = currMap->typeList + (currMap->numTypes - 1);
+		typeEntry->resourceType = theType;
+		typeEntry->numberOfResourcesOfType = 0;
+		typeEntry->resourceList = NULL;
+		
+		FakeRetainType(theType);
+	}
+
+	typeEntry->numberOfResourcesOfType++;
+
+	if( typeEntry->resourceList )
+	{
+		typeEntry->resourceList = realloc( typeEntry->resourceList, typeEntry->numberOfResourcesOfType * sizeof(struct FakeReferenceListEntry) );
+	}
+	else
+	{
+		typeEntry->resourceList = calloc(typeEntry->numberOfResourcesOfType, sizeof(struct FakeReferenceListEntry));
+	}
+	
+	resourceEntry = typeEntry->resourceList + ( typeEntry->numberOfResourcesOfType - 1 );
+	resourceEntry->resourceAttributes = 0;
+	resourceEntry->resourceID = theID;
+	memcpy(resourceEntry->resourceName, name, sizeof(FakeStr255));
+	resourceEntry->resourceHandle = theData;
+
+	currMap->dirty = true;
+
+	gFakeResError = noErr;
+}
+
+void FakeChangedResource( Handle theResource )
+{
+	struct FakeResourceMap* theMap = NULL;
+	struct FakeReferenceListEntry* theEntry = NULL;
+	if( !FakeFindResourceHandle( theResource, &theMap, NULL, &theEntry ) )
+	{
+		gFakeResError = resNotFound;
+		return;
+	}
+
+	if( (theEntry->resourceAttributes & resProtected) == 0 )
+	{
+		theMap->dirty = true;
+		gFakeResError = noErr;
+	}
+	else
+	{
+		gFakeResError = resAttrErr;
+	}
+}
+
+// NOTE: you must call DisposeHandle(theResource) manually to release the memory.  Normally,
+//       the Resource Manager will dispose the handle on update or file close, but this implementation
+//       does not track removed resource handles for later disposal.
+void FakeRemoveResource( Handle theResource )
+{
+	struct FakeResourceMap* currMap = gCurrResourceMap;
+	struct FakeTypeListEntry* typeEntry = NULL;
+	struct FakeReferenceListEntry* resEntry = NULL;
+	if( !currMap || !FakeFindResourceHandleInMap( theResource, &typeEntry, &resEntry, currMap ) || ((resEntry->resourceAttributes & resProtected) != 0) )
+	{
+		gFakeResError = rmvResFailed;
+		return;
+	}
+	
+	struct FakeReferenceListEntry* nextResEntry = resEntry + 1;
+	int resourcesListSize = typeEntry->numberOfResourcesOfType * sizeof(struct FakeReferenceListEntry);
+	long nextResEntryOffset   = (void*)nextResEntry - (void*)typeEntry->resourceList;
+	
+	typeEntry->numberOfResourcesOfType--;
+
+	if( typeEntry->numberOfResourcesOfType > 0 )
+	{
+		memcpy( resEntry, nextResEntry, resourcesListSize - nextResEntryOffset );
+		typeEntry->resourceList = realloc( typeEntry->resourceList, resourcesListSize - sizeof(struct FakeReferenceListEntry) );
+	}
+	else
+	{
+		// got rid of the last resource reference, release the memory
+		free(typeEntry->resourceList);
+		typeEntry->resourceList = NULL;
+
+		// now remove the type entry
+		struct FakeTypeListEntry* nextTypeEntry = typeEntry + 1;
+		int typeListSize = currMap->numTypes * sizeof(struct FakeTypeListEntry);
+		long nextTypeEntryOffset   = (void*)nextTypeEntry - (void*)currMap->typeList;
+
+		currMap->numTypes--;
+		FakeReleaseType(typeEntry->resourceType);
+
+		if( currMap->numTypes > 0 )
+		{
+			memcpy( typeEntry, nextTypeEntry, typeListSize - nextTypeEntryOffset );
+			currMap->typeList = realloc( currMap->typeList, typeListSize - sizeof(struct FakeTypeListEntry) );
+		}
+		else
+		{
+			// got rid of the last type entry
+			free(currMap->typeList);
+			currMap->typeList = NULL;
+		}
+	}
+	
+
+	currMap->dirty = true;
+	gFakeResError = noErr;
+}
+
+
+// NOTE: effectively a no-op since we don't have a way to write a resource without writing the whole map
+void FakeWriteResource( Handle theResource )
+{
+	struct FakeReferenceListEntry* resEntry = NULL;
+	if( !theResource || !FakeFindResourceHandle( theResource, NULL, NULL, &resEntry ))
+	{
+		gFakeResError = resNotFound;
+	}
+	else
+	{
+		gFakeResError = noErr;
+	}
+}
+
+// NOTE: effectively a no-op since we don't have a way to load an individual resource from disk right now.
+//       All resources are already loaded at file open time.
+void FakeLoadResource( Handle theResource )
+{
+	struct FakeReferenceListEntry* resEntry = NULL;
+	if( !theResource || !FakeFindResourceHandle( theResource, NULL, NULL, &resEntry ))
+	{
+		gFakeResError = resNotFound;
+	}
+	else
+	{
+		gFakeResError = noErr;
+	}
+}
+
+// NOTE: effectively a no-op since we don't have a way to reload a released resource from disk right now
+void FakeReleaseResource( Handle theResource )
+{
+	struct FakeReferenceListEntry* resEntry = NULL;
+	if( !theResource || !FakeFindResourceHandle( theResource, NULL, NULL, &resEntry ))
+	{
+		gFakeResError = resNotFound;
+	}
+	else
+	{
+		gFakeResError = noErr;
+	}
+}
+
+
+void FakeSetResLoad(bool load)
+{
+	// NOTE: a no-op since resources are always loaded at file open time
+}
 
 
 
