@@ -288,12 +288,12 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 	
 	uint16_t		numTypes = 0;
 	fread( &numTypes, 1, sizeof(numTypes), theFile );
-	numTypes = BIG_ENDIAN_16(numTypes);
-	printf("numTypes %d\n", numTypes +1);
+	numTypes = BIG_ENDIAN_16(numTypes) +1;
+	printf("numTypes %d\n", numTypes);
 	
-	newMap->typeList = calloc( ((int)numTypes) +1, sizeof(struct FakeTypeListEntry) );
-	newMap->numTypes = numTypes +1;
-	for( int x = 0; x < ((int)numTypes) +1; x++ )
+	newMap->typeList = calloc( ((int)numTypes), sizeof(struct FakeTypeListEntry) );
+	newMap->numTypes = numTypes;
+	for( int x = 0; x < ((int)numTypes); x++ )
 	{
 		uint32_t	currType = 0;
 		fread( &currType, 1, sizeof(uint32_t), theFile );	// Read type code (4CC).
@@ -569,9 +569,18 @@ void	FakeUpdateResFile( int16_t inFileRefNum )
 	// Start writing resource map after data:
 	uint32_t		resMapLength = 0;
 	FakeFSeek( currMap->fileDescriptor, resMapOffset, SEEK_SET );
+
+    // Copy what we know from the resource header
+    FakeFWriteUInt32BE( resDataOffset, currMap->fileDescriptor );
+    FakeFWriteUInt32BE( resMapOffset, currMap->fileDescriptor );
+    FakeFWriteUInt32BE( resDataLength, currMap->fileDescriptor );
+    FakeFWriteUInt32BE( 0, currMap->fileDescriptor ); // Placeholder
+
+    // Fake a next handle
+    FakeFWriteUInt32BE( 0, currMap->fileDescriptor );
 	
 	resMapLength += kResourceHeaderLength + kResourceMapNextHandleLength + kResourceMapFileRefLength;   // reserved: copy of resource header, next resource handle, file ref
-	FakeFSeek( currMap->fileDescriptor, resMapLength, SEEK_CUR );
+    FakeFWriteInt16BE( inFileRefNum, currMap->fileDescriptor );
 	FakeFWriteUInt16BE( currMap->resFileAttributes, currMap->fileDescriptor );
 	resMapLength += sizeof(uint16_t);
 	
@@ -650,6 +659,8 @@ void	FakeUpdateResFile( int16_t inFileRefNum )
 	// Write res map length:
 	FakeFSeek( currMap->fileDescriptor, kResourceHeaderMapLengthPos, SEEK_SET );
 	FakeFWriteUInt32BE( resMapLength, currMap->fileDescriptor );
+    FakeFSeek( currMap->fileDescriptor, resMapOffset + kResourceHeaderMapLengthPos, SEEK_SET );
+    FakeFWriteUInt32BE( resMapLength, currMap->fileDescriptor );
 	
 	ftruncate(fileno(currMap->fileDescriptor), resMapOffset + resMapLength);
 	
