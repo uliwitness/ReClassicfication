@@ -74,7 +74,7 @@ typedef unsigned char	Boolean;
 #endif /* __MACTYPES__ */
 
 
-// Private data structure used internally to keep track of Handles:
+// Private data structure used internally to keep track of one Handle:
 typedef struct MasterPointer
 {
 	char*		actualPointer;	// The actual Pointer we're pointing to.
@@ -83,19 +83,24 @@ typedef struct MasterPointer
 	long		size;			// The size of this Handle.
 } MasterPointer;
 
+// Private data structure used internally to keep track of handles:
+typedef struct MasterPointerBlock
+{
+	MasterPointer				pointers[MASTERPOINTER_CHUNK_SIZE];
+	struct MasterPointerBlock*	next;
+} MasterPointerBlock;
+
 // -----------------------------------------------------------------------------
 //	Globals:
 // -----------------------------------------------------------------------------
 
-extern MasterPointer	gMasterPointers[MASTERPOINTER_CHUNK_SIZE];
-extern long				gFakeHandleError;
+extern long					gFakeHandleError;
 
 
 // -----------------------------------------------------------------------------
 //	Prototypes:
 // -----------------------------------------------------------------------------
 
-extern void		FakeInitHandles( MasterPointer* masterPtrArray );
 extern Handle	FakeNewHandle( long theSize );
 extern void		FakeDisposeHandle( Handle theHand );
 extern long		FakeGetHandleSize( Handle theHand );
