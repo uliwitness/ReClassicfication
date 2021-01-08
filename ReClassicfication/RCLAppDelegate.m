@@ -20,29 +20,27 @@
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
-	Handle		theHand;
-	long		theSize;
-	char		num;
-	
-	FakeInitHandles( gMasterPointers );
+	Handle			theHand;
+	long			theSize;
+	unsigned char	num;
 	
 	theHand = FakeNewHandle( 2 );
 	
 	(**(short**)theHand) = -1024;
 	
-	printf( "The number is: %d\n", (**(short**)theHand) );
+	printf( "The number is: 0x%02x\n", (**(unsigned short**)theHand) );
 	
 	theSize = FakeGetHandleSize( theHand );
 	printf( "Current Size: %ld\n", theSize );
 	
-	num = ((**(short**)theHand) & 0xFF00) >> 8;
+	num = ((**(unsigned short**)theHand) & 0xFF00) >> 8;
 	
 	theSize -= 1;
 	FakeSetHandleSize( theHand, theSize );
 	theSize = FakeGetHandleSize( theHand );
 	printf( "New Size: %ld\n", theSize );
 	
-	printf( "The number is: %d (%d)\n", (**(char**)theHand), num );
+	printf( "The number is: 0x%02x (high byte 0x%02x)\n", (**(char**)theHand), num );
 	
 	printf( "\n============================================================\n\n" );
 
