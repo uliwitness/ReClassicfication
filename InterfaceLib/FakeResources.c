@@ -206,8 +206,16 @@ struct FakeResourceMap*	FakeFindResourceMap( int16_t inFileRefNum, struct FakeRe
 	return currMap;
 }
 
+short fakeresfileopen(const char* inPath, const char* inMode, size_t startOffs) {
+    struct FakeResourceMap	* theMap = FakeResFileOpen(inPath, inMode, startOffs);
+    if( theMap )
+        return theMap->fileRefNum;
+    else
+        return gFakeResError;
+}
 
-struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode )
+
+struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode, size_t startOffs )
 {
 	FILE		*			theFile = fopen( inPath, inMode );
 	if( !theFile )
@@ -224,7 +232,9 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 	struct FakeResourceMap	*	newMap = calloc( 1, sizeof(struct FakeResourceMap) );
 	newMap->fileDescriptor = theFile;
 	newMap->fileRefNum = gFileRefNumSeed++;
-	
+
+    fseek(theFile, startOffs, SEEK_SET);
+
 	if( fread( &resourceDataOffset, 1, sizeof(resourceDataOffset), theFile ) != sizeof(resourceDataOffset) )
 	{
 		gFakeResError = eofErr;
@@ -232,7 +242,7 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 		newMap = NULL;
 		return NULL;
 	}
-	resourceDataOffset = BIG_ENDIAN_32(resourceDataOffset);
+	resourceDataOffset = BIG_ENDIAN_32(resourceDataOffset) + startOffs;
 	printf("resourceDataOffset %d\n", resourceDataOffset);
 
 	if( fread( &resourceMapOffset, 1, sizeof(resourceMapOffset), theFile ) != sizeof(resourceMapOffset) )
@@ -242,7 +252,7 @@ struct FakeResourceMap*	FakeResFileOpen( const char* inPath, const char* inMode 
 		newMap = NULL;
 		return NULL;
 	}
-	resourceMapOffset = BIG_ENDIAN_32(resourceMapOffset);
+	resourceMapOffset = BIG_ENDIAN_32(resourceMapOffset) + startOffs;
 	printf("resourceMapOffset %d\n", resourceMapOffset);
 	
 	if( fread( &lengthOfResourceData, 1, sizeof(lengthOfResourceData), theFile ) != sizeof(lengthOfResourceData) )
@@ -387,9 +397,9 @@ int16_t	FakeOpenResFile( const unsigned char* inPath )
 #if READ_REAL_RESOURCE_FORKS
 	memmove(thePath +inPath[0],resForkSuffix,17);
 #endif // READ_REAL_RESOURCE_FORKS
-	struct FakeResourceMap*	theMap = FakeResFileOpen( thePath, "r+" );
+	struct FakeResourceMap*	theMap = FakeResFileOpen( thePath, "r+", 0 );
 	if( !theMap )
-		theMap = FakeResFileOpen( thePath, "r" );
+		theMap = FakeResFileOpen( thePath, "r", 0 );
 	if( theMap )
 		return theMap->fileRefNum;
 	else
@@ -893,7 +903,7 @@ Handle FakeGet1IndResource( uint32_t resType, int16_t index )
 	return NULL;
 }
 
-void FakeGetResInfo( Handle theResource, int16_t * theID, uint32_t * theType, FakeStr255 * name )
+void FakeGetResInfo( Handle theResource, int16_t * theID, uint32_t * theType, FakeStr255 name )
 {
 	struct FakeTypeListEntry*   typeEntry = NULL;
 	struct FakeReferenceListEntry* refEntry = NULL;

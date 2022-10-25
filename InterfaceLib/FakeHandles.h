@@ -29,7 +29,11 @@
 #ifndef FAKEHANDLES_H
 #define FAKEHANDLES_H
 
-#pragma mark [Headers]
+#if __cplusplus
+extern "C" {
+#endif
+
+#pragma mark[Headers]
 
 
 // -----------------------------------------------------------------------------
@@ -46,19 +50,18 @@
 // -----------------------------------------------------------------------------
 
 #ifndef NULL
-  #define NULL	0L
+#define NULL	0L
 #endif
 
-#define MASTERPOINTER_CHUNK_SIZE		1024	// Size of blocks of master pointers we allocate in one go.
+#define MASTERPOINTER_CHUNK_SIZE        1024    // Size of blocks of master pointers we allocate in one go.
 
 
 // Error codes MemError() may return after Handle calls:
-enum
-{
+enum {
 #ifndef __MACTYPES__
-	noErr		= 0,	// No error, success.
+    noErr = 0,    // No error, success.
 #endif /* __MACTYPES__ */
-	memFulErr	= -108	// Out of memory error.
+    memFulErr = -108    // Out of memory error.
 };
 
 
@@ -68,52 +71,54 @@ enum
 
 // Data types special to Mac:
 
-typedef	char**			Handle;
+typedef char **Handle;
 #ifndef __MACTYPES__
-typedef unsigned char	Boolean;
+typedef unsigned char Boolean;
 #endif /* __MACTYPES__ */
 
 
 // Private data structure used internally to keep track of one Handle:
-typedef struct MasterPointer
-{
-	char*		actualPointer;	// The actual Pointer we're pointing to.
-	Boolean		used;			// Is this master Ptr being used?
-	long		memoryFlags;	// Some flags for this Handle.
-	long		size;			// The size of this Handle.
+typedef struct MasterPointer {
+    char *actualPointer;    // The actual Pointer we're pointing to.
+    Boolean used;            // Is this master Ptr being used?
+    long memoryFlags;    // Some flags for this Handle.
+    long size;            // The size of this Handle.
 } MasterPointer;
 
 // Private data structure used internally to keep track of handles:
-typedef struct MasterPointerBlock
-{
-	MasterPointer				pointers[MASTERPOINTER_CHUNK_SIZE];
-	struct MasterPointerBlock*	next;
+typedef struct MasterPointerBlock {
+    MasterPointer pointers[MASTERPOINTER_CHUNK_SIZE];
+    struct MasterPointerBlock *next;
 } MasterPointerBlock;
 
 // -----------------------------------------------------------------------------
 //	Globals:
 // -----------------------------------------------------------------------------
 
-extern long					gFakeHandleError;
+extern long gFakeHandleError;
 
 
 // -----------------------------------------------------------------------------
 //	Prototypes:
 // -----------------------------------------------------------------------------
 
-extern Handle	FakeNewHandle( long theSize );
-extern void		FakeDisposeHandle( Handle theHand );
-extern long		FakeGetHandleSize( Handle theHand );
-extern void		FakeSetHandleSize( Handle theHand, long theSize );
-extern void		FakeMoreMasters( void );
-extern Handle	FakeNewEmptyHandle();
-extern void		FakeEmptyHandle( Handle theHand );
+extern Handle FakeNewHandle(long theSize);
+
+extern void FakeDisposeHandle(Handle theHand);
+
+extern long FakeGetHandleSize(Handle theHand);
+
+extern void FakeSetHandleSize(Handle theHand, long theSize);
+
+extern void FakeMoreMasters(void);
+
+extern Handle FakeNewEmptyHandle();
+
+extern void FakeEmptyHandle(Handle theHand);
 
 
-
-
-
-
-
+#if __cplusplus
+};
+#endif
 
 #endif /*FAKEHANDLES_H*/
